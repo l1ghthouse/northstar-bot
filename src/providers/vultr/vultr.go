@@ -4,15 +4,20 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
+
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
 	"github.com/sethvargo/go-password/password"
 	"github.com/vultr/govultr/v2"
 	"golang.org/x/oauth2"
-	"strings"
 )
 
-const ephemeral = "ephemeral"
+const (
+	ephemeral           = "ephemeral"
+	ubuntuDockerImageID = 37
+	PinLength           = 5
+)
 
 type Config struct {
 	APIKey string `required:"true"`
@@ -23,15 +28,15 @@ type Vultr struct {
 }
 
 func (v Vultr) CreateServer(ctx context.Context, server nsserver.NSServer) (nsserver.NSServer, error) {
-	c := newVultrClient(ctx, v.key)
-	region, err := c.getVultrRegionByCity(server.Region)
+	vClient := newVultrClient(ctx, v.key)
+	region, err := vClient.getVultrRegionByCity(ctx, server.Region)
 	if err != nil {
 		return nsserver.NSServer{}, err
 	}
 	server.Region = region.City
 	server.Name = util.CreateFunnyName()
-	server.Password = password.MustGenerate(5, 5, 0, false, true)
-	err = c.createNorthstarInstance(server, region.ID)
+	server.Password = password.MustGenerate(PinLength, PinLength, 0, false, true)
+	err = vClient.createNorthstarInstance(ctx, server, region.ID)
 	if err != nil {
 		return nsserver.NSServer{}, err
 	}
@@ -40,17 +45,18 @@ func (v Vultr) CreateServer(ctx context.Context, server nsserver.NSServer) (nsse
 
 func (v Vultr) DeleteServer(ctx context.Context, server nsserver.NSServer) error {
 	c := newVultrClient(ctx, v.key)
-	return c.deleteNorthstarInstance(server.Name)
+
+	return c.deleteNorthstarInstance(ctx, server.Name)
 }
 
 func (v Vultr) GetRunningServers(ctx context.Context) ([]nsserver.NSServer, error) {
-	c := newVultrClient(ctx, v.key)
-	instances, err := c.getVultrInstances()
+	vClient := newVultrClient(ctx, v.key)
+	instances, err := vClient.getVultrInstances(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	regions, err := c.listVultrRegion()
+	regions, err := vClient.listVultrRegion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -84,50 +90,48 @@ func client(ctx context.Context, key string) *govultr.Client {
 
 type vultrClient struct {
 	client *govultr.Client
-	ctx    context.Context
 }
 
 func newVultrClient(ctx context.Context, apiKey string) *vultrClient {
 	return &vultrClient{
 		client: client(ctx, apiKey),
-		ctx:    ctx,
 	}
 }
 
-func (v *vultrClient) getVultrRegionByCity(region string) (govultr.Region, error) {
-	var availableRegions []string
-	if regions, err := v.listVultrRegion(); err != nil {
+func (v *vultrClient) getVultrRegionByCity(ctx context.Context, region string) (govultr.Region, error) {
+	availableRegions := make([]string, len(region))
+	regions, err := v.listVultrRegion(ctx)
+	if err != nil {
 		return govultr.Region{}, err
-	} else {
-		for _, r := range regions {
-			availableRegions = append(availableRegions, r.City)
-			if strings.Contains(strings.ToLower(r.City), strings.ToLower(region)) {
-				return r, nil
-			}
+	}
+
+	for i, r := range regions {
+		availableRegions[i] = r.City
+		if strings.Contains(strings.ToLower(r.City), strings.ToLower(region)) {
+			return r, nil
 		}
 	}
 
-	return govultr.Region{}, fmt.Errorf("no region found for %s. Avaliable regions: %+v", region, strings.Join(availableRegions, ", "))
+	return govultr.Region{}, fmt.Errorf("no region found for %s. Available regions: %+v", region, strings.Join(availableRegions, ", "))
 }
 
-func (v *vultrClient) listVultrRegion() ([]govultr.Region, error) {
-	regions, _, err := v.client.Region.List(v.ctx, &govultr.ListOptions{})
+func (v *vultrClient) listVultrRegion(ctx context.Context) ([]govultr.Region, error) {
+	regions, _, err := v.client.Region.List(ctx, &govultr.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to list regions: %w", err)
 	}
 	return regions, nil
 }
 
-func (v *vultrClient) getVultrInstances() ([]govultr.Instance, error) {
-	list, _, err := v.client.Instance.List(v.ctx, &govultr.ListOptions{Tag: ephemeral})
+func (v *vultrClient) getVultrInstances(ctx context.Context) ([]govultr.Instance, error) {
+	list, _, err := v.client.Instance.List(ctx, &govultr.ListOptions{Tag: ephemeral})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to list instances: %w", err)
 	}
 	return list, nil
-
 }
 
-func (v *vultrClient) createNorthstarInstance(server nsserver.NSServer, regionID string) error {
+func (v *vultrClient) createNorthstarInstance(ctx context.Context, server nsserver.NSServer, regionID string) error {
 	// Create a base64 encoded script that will: Download northstar container, and Titanfall2 files from git, to startup the server
 	cmd := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`#!/bin/bash
 docker pull ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0
@@ -165,7 +169,7 @@ docker run --rm -d --pull always --publish 8081:8081/tcp --publish 37015:37015/u
 	}
 
 	// Docker image doesn't have cloud-init, so we will instead create a custom script first
-	resScript, err := v.client.StartupScript.Create(v.ctx, script)
+	resScript, err := v.client.StartupScript.Create(ctx, script)
 	if err != nil {
 		return fmt.Errorf("unable to create startup script: %w", err)
 	}
@@ -174,41 +178,41 @@ docker run --rm -d --pull always --publish 8081:8081/tcp --publish 37015:37015/u
 		Region:   regionID,
 		Plan:     "vc2-4c-8gb", // 4cpu, 8gb plan until single core is supported. More info: https://www.vultr.com/api/#operation/list-os
 		Label:    server.Name,
-		AppID:    37,           // Ubuntu Docker
+		AppID:    ubuntuDockerImageID,
 		UserData: cmd,          // Command to pull docker container, and create a server
 		ScriptID: resScript.ID, // Startup script
 		Tag:      ephemeral,    // ephemeral is used to autodelete the instance after some time
 	}
 
-	_, err = v.client.Instance.Create(context.Background(), instanceOptions)
+	_, err = v.client.Instance.Create(ctx, instanceOptions)
 	if err != nil {
 		return fmt.Errorf("unable to create instance: %w", err)
 	}
 	return nil
 }
 
-func (v *vultrClient) listStartupScripts() ([]govultr.StartupScript, error) {
-	scripts, _, err := v.client.StartupScript.List(v.ctx, &govultr.ListOptions{})
+func (v *vultrClient) listStartupScripts(ctx context.Context) ([]govultr.StartupScript, error) {
+	scripts, _, err := v.client.StartupScript.List(ctx, &govultr.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to list startup scripts: %w", err)
 	}
 	return scripts, nil
 }
 
-func (v *vultrClient) deleteNorthstarInstance(serverName string) error {
-	instances, err := v.getVultrInstances()
+func (v *vultrClient) deleteNorthstarInstance(ctx context.Context, serverName string) error {
+	instances, err := v.getVultrInstances(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to list running instances: %w", err)
 	}
 
-	scripts, err := v.listStartupScripts()
+	scripts, err := v.listStartupScripts(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to list startup scripts: %w", err)
 	}
 
 	for _, script := range scripts {
 		if script.Name == serverName {
-			err = v.client.StartupScript.Delete(v.ctx, script.ID)
+			err = v.client.StartupScript.Delete(ctx, script.ID)
 			if err != nil {
 				return fmt.Errorf("unable to delete startup script: %w", err)
 			}
@@ -217,7 +221,7 @@ func (v *vultrClient) deleteNorthstarInstance(serverName string) error {
 
 	for _, instance := range instances {
 		if instance.Label == serverName {
-			err = v.client.Instance.Delete(v.ctx, instance.ID)
+			err = v.client.Instance.Delete(ctx, instance.ID)
 			if err != nil {
 				return fmt.Errorf("unable to delete instance: %w", err)
 			}

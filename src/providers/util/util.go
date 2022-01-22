@@ -1,11 +1,12 @@
 package util
 
 import (
-	"github.com/lucasepe/codename"
 	"log"
+
+	"github.com/lucasepe/codename"
 )
 
-// CreateFunnyName generates a docker like name
+// CreateFunnyName generates a docker like name.
 func CreateFunnyName() string {
 	rng, err := codename.DefaultRNG()
 	if err != nil {

@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"fmt"
+
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers/vultr"
 )
@@ -18,11 +19,15 @@ type Config struct {
 	Vultr vultr.Config
 }
 
-func NewProvider(c Config) (Provider, error) {
-	switch c.Use {
+func NewProvider(cfg Config) (Provider, error) {
+	switch cfg.Use {
 	case "vultr":
-		return vultr.NewVultrProvider(c.Vultr)
+		p, err := vultr.NewVultrProvider(cfg.Vultr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create vultr provider: %w", err)
+		}
+		return p, nil
 	default:
-		return nil, fmt.Errorf("provider %s not supported", c.Use)
+		return nil, fmt.Errorf("provider %s not supported", cfg.Use)
 	}
 }

@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+
 	"github.com/l1ghthouse/northstar-bootstrap/src/bot/discord"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers"
 )
@@ -16,11 +17,17 @@ type Config struct {
 	Discord discord.Config
 }
 
-func NewBot(c Config) (Bot, error) {
-	switch c.Use {
+// NewBot returns a new bot instance, depending on the cfg.Use value.
+// nolint: ireturn
+func NewBot(cfg Config) (Bot, error) {
+	switch cfg.Use {
 	case "discord":
-		return discord.NewDiscordBot(c.Discord)
+		bot, err := discord.NewDiscordBot(cfg.Discord)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create discord bot: %w", err)
+		}
+		return bot, nil
 	default:
-		return nil, fmt.Errorf("bot %s not supported", c.Use)
+		return nil, fmt.Errorf("bot %s not supported", cfg.Use)
 	}
 }
