@@ -63,9 +63,9 @@ func NewDiscordBot(config Config) (*Discord, error) {
 }
 
 const (
-	CreateServer string = "!create_server "
-	ListServer   string = "!list_servers "
-	DeleteServer string = "!delete_server "
+	CreateServer string = "!create_server"
+	ListServer   string = "!list_servers"
+	DeleteServer string = "!delete_server"
 )
 
 type handler struct {
