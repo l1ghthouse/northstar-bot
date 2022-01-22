@@ -119,7 +119,7 @@ func (h handler) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate)
 				log.Println("Error sending message: ", err)
 			}
 		} else {
-			_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("created server %s in %s, with password: `%s`. It will take the server around 8 minutes to come online", server.Name, server.Region, server.Password))
+			_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("created server %s in %s, with password: `%s`. It will take the server around 5 minutes to come online", server.Name, server.Region, server.Password))
 			if err != nil {
 				log.Println("Error sending message: ", err)
 			}
