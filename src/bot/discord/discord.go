@@ -11,10 +11,7 @@ import (
 )
 
 type Config struct {
-	DcBotToken     string `required:"true"`
-	DcClientID     string `required:"true"`
-	DcClientSecret string `required:"true"`
-	DcOwnerID      string `required:"true"`
+	DcBotToken string `required:"true"`
 }
 
 type Discord struct {
@@ -61,9 +58,9 @@ func NewDiscordBot(config Config) (*Discord, error) {
 }
 
 const (
-	CreateServer string = "!create_server"
-	ListServer   string = "!list_servers"
-	DeleteServer string = "!delete_server"
+	CreateServer string = "!create_server "
+	ListServer   string = "!list_servers "
+	DeleteServer string = "!delete_server "
 )
 
 type handler struct {
@@ -82,62 +79,89 @@ func (h handler) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate)
 	}
 
 	ctx := context.Background() //TODO: add timeout
+	msg := strings.Split(m.Content, " ")
+	cmd := msg[0]
+	args := ""
+	if len(msg) > 1 {
+		args = strings.Join(msg[1:], " ")
+	}
 
 	switch {
-	case strings.HasPrefix(m.Content, CreateServer):
-
-		str := strings.Split(m.Content, " ")
-		if len(str) != 2 {
-			_, err := s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s command takes only one argument. Make sure to specify region to which the server should be deployed", CreateServer))
-			if err != nil {
-				log.Println("Error sending message: ", err)
-			}
+	case cmd == CreateServer:
+		if args == "" {
+			sendMessage(s, m, fmt.Sprintf("%s command is missing Region", CreateServer))
 			return
 		}
 
 		servers, err := h.p.GetRunningServers(ctx)
 		if err != nil {
-			log.Println("Error getting running servers: ", err)
+			sendMessage(s, m, fmt.Sprintf("Unable to list running servers: %v", err))
 			return
 		}
 		if len(servers) >= h.maxConcurrentServers {
-			_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers))
-			if err != nil {
-				log.Println("Error sending message: ", err)
-			}
+			sendMessage(s, m, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers))
 			return
 		}
 
 		server, err := h.p.CreateServer(ctx, nsserver.NSServer{
 			Name:     "",
-			Region:   str[1],
+			Region:   args,
 			Password: "",
 		})
 		if err != nil {
-			_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("failed to create the target server. error: %v", err))
-			if err != nil {
-				log.Println("Error sending message: ", err)
-			}
+			sendMessage(s, m, fmt.Sprintf("failed to create the target server. error: %v", err))
 		} else {
-			_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("created server %s in %s, with password: `%s`. It will take the server around 5 minutes to come online", server.Name, server.Region, server.Password))
+			sendMessage(s, m, fmt.Sprintf("created server %s in %s, with password: `%s`. It will take the server around 5 minutes to come online", server.Name, server.Region, server.Password))
+		}
+
+	case cmd == DeleteServer:
+		if args == "" {
+			sendMessage(s, m, fmt.Sprintf("%s command is missing server name", DeleteServer))
+			return
+		}
+		err := h.p.DeleteServer(ctx, nsserver.NSServer{
+			Name:     args,
+			Region:   "",
+			Password: "",
+		})
+		if err != nil {
+			sendMessage(s, m, fmt.Sprintf("failed to delete the target server. error: %v", err))
+		} else {
+			sendMessage(s, m, fmt.Sprintf("deleted server %s", args))
+		}
+
+	case cmd == ListServer:
+		nsservers, err := h.p.GetRunningServers(ctx)
+		if err != nil {
+			sendMessage(s, m, fmt.Sprintf("failed to list running servers. error: %v", err))
 			if err != nil {
 				log.Println("Error sending message: ", err)
 			}
+			return
 		}
 
-	case strings.HasPrefix(m.Content, DeleteServer):
-		_, err := s.ChannelMessageSend(m.ChannelID, "Deleting Server...")
-		//TODO: delete server
-		if err != nil {
-			log.Println("Error sending message: ", err)
+		servers := make([]string, len(nsservers))
+
+		if len(nsservers) == 0 {
+			sendMessage(s, m, "No servers running")
+			return
+		} else {
+			for _, server := range nsservers {
+				servers = append(servers, fmt.Sprintf("%s in %s", server.Name, server.Region))
+			}
 		}
 
-	case strings.HasPrefix(m.Content, ListServer):
-		_, err := s.ChannelMessageSend(m.ChannelID, "Listing Servers...")
-		//TODO: list server
+		sendMessage(s, m, strings.Join(servers, "\n"))
 		if err != nil {
 			log.Println("Error sending message: ", err)
 		}
 	}
 
+}
+
+func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) {
+	_, err := s.ChannelMessageSend(m.ChannelID, msg)
+	if err != nil {
+		log.Println("Error sending message: ", err)
+	}
 }

@@ -39,7 +39,8 @@ func (v Vultr) CreateServer(ctx context.Context, server nsserver.NSServer) (nsse
 }
 
 func (v Vultr) DeleteServer(ctx context.Context, server nsserver.NSServer) error {
-	panic("implement me")
+	c := newVultrClient(ctx, v.key)
+	return c.deleteNorthstarInstance(server.Name)
 }
 
 func (v Vultr) GetRunningServers(ctx context.Context) ([]nsserver.NSServer, error) {
@@ -184,4 +185,45 @@ docker run --rm -d --pull always --publish 8081:8081/tcp --publish 37015:37015/u
 		return fmt.Errorf("unable to create instance: %w", err)
 	}
 	return nil
+}
+
+func (v *vultrClient) listStartupScripts() ([]govultr.StartupScript, error) {
+	scripts, _, err := v.client.StartupScript.List(v.ctx, &govultr.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to list startup scripts: %w", err)
+	}
+	return scripts, nil
+}
+
+func (v *vultrClient) deleteNorthstarInstance(serverName string) error {
+	instances, err := v.getVultrInstances()
+	if err != nil {
+		return fmt.Errorf("unable to list running instances: %w", err)
+	}
+
+	scripts, err := v.listStartupScripts()
+	if err != nil {
+		return fmt.Errorf("unable to list startup scripts: %w", err)
+	}
+
+	for _, script := range scripts {
+		if script.Name == serverName {
+			err = v.client.StartupScript.Delete(v.ctx, script.ID)
+			if err != nil {
+				return fmt.Errorf("unable to delete startup script: %w", err)
+			}
+		}
+	}
+
+	for _, instance := range instances {
+		if instance.Label == serverName {
+			err = v.client.Instance.Delete(v.ctx, instance.ID)
+			if err != nil {
+				return fmt.Errorf("unable to delete instance: %w", err)
+			}
+			return nil
+		}
+	}
+
+	return fmt.Errorf("no instance found for %s", serverName)
 }
