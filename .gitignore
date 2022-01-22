@@ -1,0 +1,12 @@
+.idea/
+.vscode/
+config.yml
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+go.work

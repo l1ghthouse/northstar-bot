@@ -1,0 +1,12 @@
+bot:
+  discord:
+    dcbottoken: "YOUR_DISCORD_BOT_TOKEN"
+    dcclientid: "YOUR_DISCORD_CLIENT_ID"
+    dcclientsecret: "YOUR_DISCORD_CLIENT_SECRET"
+    dcownerid: "YOUR_DISCORD_OWNER_ID"
+
+maxconcurrentinstances: 1
+
+provider:
+  vultr:
+    apikey: "YOUR_VULTR_API_KEY"
