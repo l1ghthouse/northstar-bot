@@ -94,8 +94,7 @@ func (h *handler) messageCreate(session *discordgo.Session, message *discordgo.M
 }
 
 func (h *handler) handleMessage(ctx context.Context, session *discordgo.Session, message *discordgo.MessageCreate, cmd string, args string) {
-
-	p, err := session.State.MessagePermissions(message.Message)
+	permissions, err := session.State.MessagePermissions(message.Message)
 	if err != nil {
 		sendMessage(session, message, fmt.Sprintf("Error getting permissions: %v", err.Error()))
 
@@ -107,7 +106,7 @@ func (h *handler) handleMessage(ctx context.Context, session *discordgo.Session,
 		h.handleCreateServer(ctx, session, message, args)
 
 	case cmd == DeleteServer:
-		if p&discordgo.PermissionAdministrator == 0 {
+		if permissions&discordgo.PermissionAdministrator == 0 {
 			sendMessage(session, message, "You don't have permission to delete servers")
 			return
 		}
