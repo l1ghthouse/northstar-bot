@@ -100,7 +100,7 @@ func (v *vultrClient) getVultrRegionByCity(region string) (govultr.Region, error
 	} else {
 		for _, r := range regions {
 			availableRegions = append(availableRegions, r.City)
-			if strings.Contains(strings.ToLower(region), strings.ToLower(r.City)) {
+			if strings.Contains(strings.ToLower(r.City), strings.ToLower(region)) {
 				return r, nil
 			}
 		}
