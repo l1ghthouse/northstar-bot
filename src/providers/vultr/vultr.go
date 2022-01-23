@@ -99,11 +99,11 @@ func newVultrClient(ctx context.Context, apiKey string) *vultrClient {
 }
 
 func (v *vultrClient) getVultrRegionByCity(ctx context.Context, region string) (govultr.Region, error) {
-	availableRegions := make([]string, len(region))
 	regions, err := v.listVultrRegion(ctx)
 	if err != nil {
 		return govultr.Region{}, err
 	}
+	availableRegions := make([]string, len(regions))
 
 	for i, r := range regions {
 		availableRegions[i] = r.City
@@ -112,7 +112,7 @@ func (v *vultrClient) getVultrRegionByCity(ctx context.Context, region string) (
 		}
 	}
 
-	return govultr.Region{}, fmt.Errorf("no region found for %s. Available regions: %+v", region, strings.Join(availableRegions, ", "))
+	return govultr.Region{}, fmt.Errorf("no region found for %s. Available regions: %s", region, strings.Join(availableRegions, ", "))
 }
 
 func (v *vultrClient) listVultrRegion(ctx context.Context) ([]govultr.Region, error) {
