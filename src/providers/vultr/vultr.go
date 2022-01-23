@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
@@ -214,7 +215,7 @@ func (v *vultrClient) deleteNorthstarInstance(ctx context.Context, serverName st
 		if script.Name == serverName {
 			err = v.client.StartupScript.Delete(ctx, script.ID)
 			if err != nil {
-				return fmt.Errorf("unable to delete startup script: %w", err)
+				log.Printf("unable to delete startup script: %v", err)
 			}
 		}
 	}
