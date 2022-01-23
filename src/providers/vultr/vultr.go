@@ -132,7 +132,7 @@ func (v *vultrClient) getVultrInstances(ctx context.Context) ([]govultr.Instance
 	return list, nil
 }
 
-const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1.20220120.git9759d60-tf2.0.11.0-ns1.4.0"
+const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.4.0"
 
 func (v *vultrClient) createNorthstarInstance(ctx context.Context, server nsserver.NSServer, regionID string) error {
 	// Create a base64 encoded script that will: Download northstar container, and Titanfall2 files from git, to startup the server
