@@ -132,10 +132,12 @@ func (v *vultrClient) getVultrInstances(ctx context.Context) ([]govultr.Instance
 	return list, nil
 }
 
+const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1.20220120.git9759d60-tf2.0.11.0-ns1.4.0"
+
 func (v *vultrClient) createNorthstarInstance(ctx context.Context, server nsserver.NSServer, regionID string) error {
 	// Create a base64 encoded script that will: Download northstar container, and Titanfall2 files from git, to startup the server
 	cmd := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`#!/bin/bash
-docker pull ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0
+docker pull %s
 
 apt update -y
 apt install parallel jq -y
@@ -161,7 +163,7 @@ curl -L "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp" -s 
 
 docker run --rm -d --pull always --publish 8081:8081/tcp --publish 37015:37015/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall" --env NS_SERVER_NAME="[%s]%s" --env NS_SERVER_DESC="%s" --env NS_SERVER_PASSWORD="%s" --env NS_INSECURE="%s" ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0
 
-`, server.Region, server.Name, "Competitive LTS!! Yay!", server.Password, "1")))
+`, dockerImage, server.Region, server.Name, "Competitive LTS!! Yay!", server.Password, "1")))
 
 	script := &govultr.StartupScriptReq{
 		Name:   server.Name,
