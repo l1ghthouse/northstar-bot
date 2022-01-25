@@ -79,7 +79,11 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	if err != nil {
 		sendMessage(session, interaction, fmt.Sprintf("failed to create the target server. error: %v", err))
 	} else {
-		sendMessage(session, interaction, fmt.Sprintf("created server %s in %s, with password: `%s`. It will take the server around 5 minutes to come online", server.Name, server.Region, server.Password))
+		autodeleteMessage := ""
+		if h.autoDeleteDuration != time.Duration(0) {
+			autodeleteMessage = fmt.Sprintf("\nThis server will be deleted in %s", h.autoDeleteDuration.String())
+		}
+		sendMessage(session, interaction, fmt.Sprintf("created server %s in %s, with password: `%s`. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, server.Password)+autodeleteMessage)
 	}
 }
 
