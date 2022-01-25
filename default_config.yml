@@ -1,13 +1,11 @@
 bot:
   discord:
     dcbottoken: "YOUR_DISCORD_BOT_TOKEN"
-    dcclientid: "YOUR_DISCORD_CLIENT_ID"
-    dcclientsecret: "YOUR_DISCORD_CLIENT_SECRET"
-    dcownerid: "YOUR_DISCORD_OWNER_ID"
+    dcguildid: "YOUR_DISCORD_GUILD_ID"
+    botreportchannel: "YOUR_DISCORD_CHANNEL_ID_FOR_BOT_REPORTING"
 
 maxconcurrentinstances: 1
 containermaxlifetimeseconds: 3600
-botreportchannel: "YOUR_DISCORD_CHANNEL_ID_FOR_BOT_AUTODELETE_REPORT"
 
 provider:
   vultr:
