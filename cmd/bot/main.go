@@ -28,12 +28,20 @@ func main() {
 		log.Fatal("Failed to create bot: ", err)
 	}
 
-	p, err := providers.NewProvider(cfg.Provider)
+	provider, err := providers.NewProvider(cfg.Provider)
 	if err != nil {
 		log.Fatal("Failed to create provider: ", err)
 	}
+	var autoDeleteDuration time.Duration
+	if cfg.ContainerMaxLifetimeSeconds != 0 {
+		autoDeleteDuration = time.Duration(cfg.ContainerMaxLifetimeSeconds) * time.Second
+	}
 
-	err = newBot.Start(p, cfg.MaxConcurrentInstances)
+	if autoDeleteDuration != time.Duration(0) && autoDeleteDuration <= time.Minute*10 {
+		log.Fatal("ContainerMaxLifetimeSeconds must be greater than 10 minutes, or 0 to disable auto-delete")
+	}
+
+	err = newBot.Start(provider, cfg.MaxConcurrentInstances, autoDeleteDuration)
 	if err != nil {
 		log.Fatal("Error starting the bot: ", err)
 	}

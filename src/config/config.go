@@ -6,7 +6,8 @@ import (
 )
 
 type Config struct {
-	Provider               providers.Config
-	Bot                    bot.Config
-	MaxConcurrentInstances int `default:"1"`
+	Provider                    providers.Config
+	Bot                         bot.Config
+	MaxConcurrentInstances      uint `default:"1"`
+	ContainerMaxLifetimeSeconds uint `default:"7200"` // 2 hours
 }

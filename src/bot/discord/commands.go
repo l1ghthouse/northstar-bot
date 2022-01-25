@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
@@ -52,7 +53,8 @@ var (
 
 type handler struct {
 	p                    providers.Provider
-	maxConcurrentServers int
+	maxConcurrentServers uint
+	autoDeleteDuration   time.Duration
 }
 
 func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -63,7 +65,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 
 		return
 	}
-	if len(servers) >= h.maxConcurrentServers {
+	if len(servers) >= int(h.maxConcurrentServers) {
 		sendMessage(session, interaction, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers))
 
 		return
@@ -122,8 +124,17 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 
 		return
 	}
-	for i, server := range nsservers {
-		servers[i] = fmt.Sprintf("%s in %s", server.Name, server.Region)
+	for idx, server := range nsservers {
+		untilDeleted := ""
+		if h.autoDeleteDuration > time.Duration(0) {
+			date, err := time.Parse(ISO8601Layout, server.CreatedAt)
+			if err != nil {
+				log.Println("error parsing date: ", err)
+			}
+			untilDeleted = fmt.Sprintf(". Time until deleted: %s", (h.autoDeleteDuration - time.Since(date)).String())
+		}
+
+		servers[idx] = fmt.Sprintf("%s in %s", server.Name, server.Region) + untilDeleted
 	}
 
 	sendMessage(session, interaction, strings.Join(servers, "\n"))

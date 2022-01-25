@@ -2,13 +2,14 @@ package bot
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/l1ghthouse/northstar-bootstrap/src/bot/discord"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers"
 )
 
 type Bot interface {
-	Start(provider providers.Provider, maxConcurrentServers int) error
+	Start(provider providers.Provider, maxConcurrentServers uint, autoDeleteDuration time.Duration) error
 	Stop()
 }
 

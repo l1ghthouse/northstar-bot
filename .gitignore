@@ -10,3 +10,6 @@ config.yml
 *.out
 vendor/
 go.work
+iso/titanfall2
+
+iso/

@@ -6,6 +6,8 @@ bot:
     dcownerid: "YOUR_DISCORD_OWNER_ID"
 
 maxconcurrentinstances: 1
+containermaxlifetimeseconds: 3600
+botreportchannel: "YOUR_DISCORD_CHANNEL_ID_FOR_BOT_AUTODELETE_REPORT"
 
 provider:
   vultr:

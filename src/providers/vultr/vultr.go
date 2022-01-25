@@ -37,7 +37,7 @@ func (v Vultr) CreateServer(ctx context.Context, server nsserver.NSServer) (nsse
 	server.Region = region.City
 	server.Name = util.CreateFunnyName()
 	server.Password = password.MustGenerate(PinLength, PinLength, 0, false, true)
-	err = vClient.createNorthstarInstance(ctx, server, region.ID)
+	err = vClient.createNorthstarInstance(ctx, &server, region.ID)
 	if err != nil {
 		return nsserver.NSServer{}, err
 	}
@@ -68,8 +68,9 @@ func (v Vultr) GetRunningServers(ctx context.Context) ([]nsserver.NSServer, erro
 		for _, region := range regions {
 			if instance.Region == region.ID {
 				ns = append(ns, nsserver.NSServer{
-					Name:   instance.Label,
-					Region: region.City,
+					Name:      instance.Label,
+					Region:    region.City,
+					CreatedAt: instance.DateCreated,
 				})
 			}
 		}
@@ -134,7 +135,7 @@ func (v *vultrClient) getVultrInstances(ctx context.Context) ([]govultr.Instance
 
 const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.4.0"
 
-func (v *vultrClient) createNorthstarInstance(ctx context.Context, server nsserver.NSServer, regionID string) error {
+func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsserver.NSServer, regionID string) error {
 	// Create a base64 encoded script that will: Download northstar container, and Titanfall2 files from git, to startup the server
 	cmd := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`#!/bin/bash
 docker pull %s
@@ -187,10 +188,11 @@ docker run --rm -d --pull always --publish 8081:8081/tcp --publish 37015:37015/u
 		Tag:      ephemeral,    // ephemeral is used to autodelete the instance after some time
 	}
 
-	_, err = v.client.Instance.Create(ctx, instanceOptions)
+	instance, err := v.client.Instance.Create(ctx, instanceOptions)
 	if err != nil {
 		return fmt.Errorf("unable to create instance: %w", err)
 	}
+	server.CreatedAt = instance.DateCreated
 	return nil
 }
 
