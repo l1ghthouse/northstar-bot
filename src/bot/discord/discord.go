@@ -24,8 +24,6 @@ type discordBot struct {
 	closeChannels []chan struct{}
 }
 
-var ISO8601Layout = "2006-01-02T15:04:05-0700"
-
 func (d *discordBot) Start(provider providers.Provider, maxConcurrentServers uint, autoDeleteDuration time.Duration) error {
 	discordClient, err := discordgo.New("Bot " + d.config.DcBotToken)
 	if err != nil {
@@ -99,7 +97,7 @@ func (d *discordBot) gracefulDiscordClose(discordClient io.Closer, callbackDone 
 // nolint: gocognit,cyclop
 func (d *discordBot) autoDelete(provider providers.Provider, autoDeleteDuration time.Duration, callbackDone chan struct{}, discordClient *discordgo.Session) {
 	defer close(callbackDone)
-	ticker := time.NewTicker(time.Minute * 120)
+	ticker := time.NewTicker(time.Minute * 2)
 	for {
 		select {
 		case <-d.ctx.Done():
@@ -112,7 +110,7 @@ func (d *discordBot) autoDelete(provider providers.Provider, autoDeleteDuration 
 				continue
 			}
 			for _, server := range servers {
-				date, err := time.Parse(ISO8601Layout, server.CreatedAt)
+				date, err := time.Parse(time.RFC3339, server.CreatedAt)
 				if err != nil {
 					log.Println("error parsing date: ", err)
 					continue

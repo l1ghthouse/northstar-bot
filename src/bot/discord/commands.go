@@ -127,7 +127,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 	for idx, server := range nsservers {
 		untilDeleted := ""
 		if h.autoDeleteDuration > time.Duration(0) {
-			date, err := time.Parse(ISO8601Layout, server.CreatedAt)
+			date, err := time.Parse(time.RFC3339, server.CreatedAt)
 			if err != nil {
 				log.Println("error parsing date: ", err)
 			}
