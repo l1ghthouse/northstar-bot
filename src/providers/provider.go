@@ -9,9 +9,9 @@ import (
 )
 
 type Provider interface {
-	CreateServer(context.Context, nsserver.NSServer) (nsserver.NSServer, error)
-	GetRunningServers(context.Context) ([]nsserver.NSServer, error)
-	DeleteServer(context.Context, nsserver.NSServer) error
+	CreateServer(context.Context, *nsserver.NSServer) error
+	GetRunningServers(context.Context) ([]*nsserver.NSServer, error)
+	DeleteServer(context.Context, *nsserver.NSServer) error
 }
 
 type Config struct {

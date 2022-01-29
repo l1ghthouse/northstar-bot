@@ -7,6 +7,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/l1ghthouse/northstar-bootstrap/src/bot/notifyer"
+	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers"
 )
@@ -24,13 +27,13 @@ type discordBot struct {
 	closeChannels []chan struct{}
 }
 
-func (d *discordBot) Start(provider providers.Provider, maxConcurrentServers uint, autoDeleteDuration time.Duration) error {
+func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, maxConcurrentServers uint, autoDeleteDuration time.Duration) (notifyer.Notifyer, error) {
 	discordClient, err := discordgo.New("Bot " + d.config.DcBotToken)
 	if err != nil {
 		log.Fatal("Error creating Discord session: ", err)
 	}
 
-	h := handler{p: provider, maxConcurrentServers: maxConcurrentServers, autoDeleteDuration: autoDeleteDuration}
+	h := handler{p: provider, maxConcurrentServers: maxConcurrentServers, autoDeleteDuration: autoDeleteDuration, nsRepo: nsRepo}
 
 	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){}
 	commandHandlers[CreateServer] = h.handleCreateServer
@@ -50,38 +53,34 @@ func (d *discordBot) Start(provider providers.Provider, maxConcurrentServers uin
 
 	go d.gracefulDiscordClose(discordClient, discordCloseConfirmation)
 
-	if autoDeleteDuration != time.Duration(0) {
-		providerCloseChannel := make(chan struct{})
-		d.closeChannels = append(d.closeChannels, providerCloseChannel)
-
-		go d.autoDelete(provider, autoDeleteDuration, providerCloseChannel, discordClient)
-	}
-
 	err = discordClient.Open()
 	if err != nil {
-		return fmt.Errorf("error opening Discord connection: %w", err)
+		return nil, fmt.Errorf("error opening Discord connection: %w", err)
 	}
 
 	cmd, err := discordClient.ApplicationCommands(discordClient.State.User.ID, d.config.DcGuildID)
 	if err != nil {
-		return fmt.Errorf("error getting commands: %w", err)
+		return nil, fmt.Errorf("error getting commands: %w", err)
 	}
 
 	for _, c := range cmd {
 		err = discordClient.ApplicationCommandDelete(discordClient.State.User.ID, d.config.DcGuildID, c.ID)
 		if err != nil {
-			return fmt.Errorf("error deleting command: %w", err)
+			return nil, fmt.Errorf("error deleting command: %w", err)
 		}
 	}
 
 	for _, v := range commands {
 		_, err = discordClient.ApplicationCommandCreate(discordClient.State.User.ID, d.config.DcGuildID, v)
 		if err != nil {
-			return fmt.Errorf("cannot create '%v' command: %w", v.Name, err)
+			return nil, fmt.Errorf("cannot create '%v' command: %w", v.Name, err)
 		}
 	}
 
-	return nil
+	return &Notifyer{
+		discordClient: discordClient,
+		config:        d.config,
+	}, nil
 }
 
 func (d *discordBot) gracefulDiscordClose(discordClient io.Closer, callbackDone chan struct{}) {
@@ -94,44 +93,6 @@ func (d *discordBot) gracefulDiscordClose(discordClient io.Closer, callbackDone 
 }
 
 // autoDelete deletes servers that are not used for a autoDeleteDuration time
-// nolint: gocognit,cyclop
-func (d *discordBot) autoDelete(provider providers.Provider, autoDeleteDuration time.Duration, callbackDone chan struct{}, discordClient *discordgo.Session) {
-	defer close(callbackDone)
-	ticker := time.NewTicker(time.Minute * 2)
-	for {
-		select {
-		case <-d.ctx.Done():
-			ticker.Stop()
-			return
-		case <-ticker.C:
-			servers, err := provider.GetRunningServers(d.ctx)
-			if err != nil {
-				log.Println("error getting running servers: ", err)
-				continue
-			}
-			for _, server := range servers {
-				date, err := time.Parse(time.RFC3339, server.CreatedAt)
-				if err != nil {
-					log.Println("error parsing date: ", err)
-					continue
-				}
-				if time.Since(date) > autoDeleteDuration {
-					err = provider.DeleteServer(d.ctx, server)
-					if err != nil {
-						log.Println("error deleting server: ", err)
-					}
-
-					if d.config.BotReportChannel != "" {
-						_, err = discordClient.ChannelMessageSend(d.config.BotReportChannel, fmt.Sprintf("Server '%s' has been deleted because it was up for over %s", server.Name, autoDeleteDuration.String()))
-						if err != nil {
-							log.Println("error sending message: ", err)
-						}
-					}
-				}
-			}
-		}
-	}
-}
 
 func (d *discordBot) Stop() {
 	log.Println("attempting to close Discord connection")

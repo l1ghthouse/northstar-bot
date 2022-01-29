@@ -27,3 +27,5 @@ linters:
     - ireturn
     - lll
     - goerr113
+    - funlen
+    - cyclop

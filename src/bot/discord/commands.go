@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
@@ -55,6 +58,7 @@ type handler struct {
 	p                    providers.Provider
 	maxConcurrentServers uint
 	autoDeleteDuration   time.Duration
+	nsRepo               nsserver.Repo
 }
 
 func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -71,20 +75,64 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		return
 	}
 
-	server, err := h.p.CreateServer(ctx, nsserver.NSServer{
-		Name:     "",
-		Region:   interaction.ApplicationCommandData().Options[0].StringValue(),
-		Password: "",
-	})
+	cachedServers, err := h.nsRepo.GetAll(ctx)
+	if err != nil {
+		sendMessage(session, interaction, fmt.Sprintf("Unable to list servers: %v", err))
+
+		return
+	}
+	var unique bool
+	name := ""
+	for i := 0; i < 5; i++ {
+		unique = true
+		name = util.CreateFunnyName()
+		for _, server := range servers {
+			if server.Name == name {
+				unique = false
+			}
+		}
+
+		for _, server := range cachedServers {
+			if server.Name == name {
+				unique = false
+			}
+		}
+		if unique {
+			break
+		}
+	}
+
+	if !unique {
+		sendMessage(session, interaction, "Unable to generate a unique name for the server, please try again")
+
+		return
+	}
+
+	server := &nsserver.NSServer{
+		Region:      interaction.ApplicationCommandData().Options[0].StringValue(),
+		RequestedBy: interaction.Member.User.ID,
+		Name:        name,
+	}
+
+	err = h.p.CreateServer(ctx, server)
 	if err != nil {
 		sendMessage(session, interaction, fmt.Sprintf("failed to create the target server. error: %v", err))
-	} else {
-		autodeleteMessage := ""
-		if h.autoDeleteDuration != time.Duration(0) {
-			autodeleteMessage = fmt.Sprintf("\nThis server will be deleted in %s", h.autoDeleteDuration.String())
-		}
-		sendMessage(session, interaction, fmt.Sprintf("created server %s in %s, with password: `%s`. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, server.Password)+autodeleteMessage)
+		return
 	}
+
+	err = h.nsRepo.Store(ctx, []*nsserver.NSServer{server})
+	if err != nil {
+		sendMessage(session, interaction, fmt.Sprintf("Unable to save server to the database: %v", err))
+
+		return
+	}
+
+	autodeleteMessage := ""
+	if h.autoDeleteDuration != time.Duration(0) {
+		autodeleteMessage = fmt.Sprintf("\nThis server will be deleted in %s", h.autoDeleteDuration.String())
+	}
+
+	sendMessage(session, interaction, fmt.Sprintf("created server %s in %s, with password: `%d`. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, *server.Pin)+autodeleteMessage)
 }
 
 func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -97,16 +145,23 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
 	ctx := context.Background()
-	err := h.p.DeleteServer(ctx, nsserver.NSServer{
-		Name:     serverName,
-		Region:   "",
-		Password: "",
+	err := h.p.DeleteServer(ctx, &nsserver.NSServer{
+		Name: serverName,
 	})
 	if err != nil {
 		sendMessage(session, interaction, fmt.Sprintf("failed to delete the target server. error: %v", err))
-	} else {
-		sendMessage(session, interaction, fmt.Sprintf("deleted server %s", serverName))
+
+		return
 	}
+
+	err = h.nsRepo.DeleteByName(ctx, serverName)
+	if err != nil {
+		sendMessage(session, interaction, fmt.Sprintf("Unable to delete server from the database: %v", err))
+
+		return
+	}
+
+	sendMessage(session, interaction, fmt.Sprintf("deleted server %s", serverName))
 }
 
 func (h *handler) handleListServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -114,11 +169,24 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 	nsservers, err := h.p.GetRunningServers(ctx)
 	if err != nil {
 		sendMessage(session, interaction, fmt.Sprintf("failed to list running servers. error: %v", err))
-		if err != nil {
-			log.Println("Error sending message: ", err)
-		}
 
 		return
+	}
+
+	cachedServers, err := h.nsRepo.GetAll(ctx)
+	if err != nil {
+		sendMessage(session, interaction, fmt.Sprintf("failed to list running servers from database. error: %v", err))
+		return
+	}
+
+	for _, cached := range cachedServers {
+		for _, server := range nsservers {
+			if server.Name == cached.Name {
+				server.Pin = cached.Pin
+				server.RequestedBy = cached.RequestedBy
+				break
+			}
+		}
 	}
 
 	servers := make([]string, len(nsservers))
@@ -131,20 +199,21 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 	for idx, server := range nsservers {
 		untilDeleted := ""
 		if h.autoDeleteDuration > time.Duration(0) {
-			date, err := time.Parse(time.RFC3339, server.CreatedAt)
-			if err != nil {
-				log.Println("error parsing date: ", err)
-			}
-			untilDeleted = fmt.Sprintf(". Time until deleted: %s", (h.autoDeleteDuration - time.Since(date)).String())
+			untilDeleted = fmt.Sprintf(". Time until deleted: %s", (h.autoDeleteDuration - time.Since(server.CreatedAt)).String())
+		}
+		pin := "unknown"
+		if server.Pin != nil {
+			pin = strconv.Itoa(*server.Pin)
+		}
+		user := "unknown"
+		if server.RequestedBy != "" {
+			user = server.RequestedBy
 		}
 
-		servers[idx] = fmt.Sprintf("%s in %s", server.Name, server.Region) + untilDeleted
+		servers[idx] = fmt.Sprintf("%s in %s. PIN: `%s`. Requested by <@%s>", server.Name, server.Region, pin, user) + untilDeleted
 	}
 
 	sendMessage(session, interaction, strings.Join(servers, "\n"))
-	if err != nil {
-		log.Println("Error sending message: ", err)
-	}
 }
 
 func sendMessage(s *discordgo.Session, i *discordgo.InteractionCreate, msg string) {
@@ -152,6 +221,9 @@ func sendMessage(s *discordgo.Session, i *discordgo.InteractionCreate, msg strin
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: msg,
+			AllowedMentions: &discordgo.MessageAllowedMentions{
+				Users: []string{},
+			},
 		},
 	}); err != nil {
 		log.Println("Error sending message: ", err)
