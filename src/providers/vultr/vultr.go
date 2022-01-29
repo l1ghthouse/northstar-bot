@@ -5,19 +5,18 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
+
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
-	"github.com/sethvargo/go-password/password"
 	"github.com/vultr/govultr/v2"
 	"golang.org/x/oauth2"
 )
 
 const (
 	ubuntuDockerImageID = 37
-	PinLength           = 5
 )
 
 type Config struct {
@@ -37,11 +36,6 @@ func (v Vultr) CreateServer(ctx context.Context, server *nsserver.NSServer) erro
 		return err
 	}
 	server.Region = region.City
-	pin, err := strconv.Atoi(password.MustGenerate(PinLength, PinLength, 0, false, true))
-	if err != nil {
-		return fmt.Errorf("failed to generate pin: %w", err)
-	}
-	server.Pin = &pin
 	err = vClient.createNorthstarInstance(ctx, server, region.ID, v.Tag)
 	if err != nil {
 		return err
@@ -143,41 +137,15 @@ func (v *vultrClient) getVultrInstances(ctx context.Context, tag string) ([]govu
 	return list, nil
 }
 
-const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.4.0"
-
-func formatScript(dockerImage, serverRegion, serverName, serverDesc string, serverPin int, insecure string) string {
-	return fmt.Sprintf(`#!/bin/bash
-docker pull %s
-
-apt update -y
-apt install parallel jq -y
-
-echo "Downloading Titanfall2 Files"
-
-curl -L "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp" -s -H "Accept: application/vnd.oci.image.manifest.v1+json" -H "Authorization: Bearer QQ==" | jq -r '.layers[]|[.digest, .annotations."org.opencontainers.image.title"] | @tsv' |
-{
-  paths=()
-  uri=()
-  while read -r line; do
-    while IFS=$'\t' read -r digest path; do
-      path="/titanfall2/$path"
-      folder=${path%%/*}
-      mkdir -p "$folder"
-      touch "$path"
-      paths+=("$path")
-      uri+=("https://ghcr.io/v2/nsres/titanfall/blobs/$digest")
-    done <<< "$line" ;
-  done
-  parallel --link --jobs 8 'wget -O {1} {2} --header="Authorization: Bearer QQ==" -nv' ::: "${paths[@]}" ::: "${uri[@]}"
-}
-
-docker run --rm -d --pull always --publish 8081:8081/tcp --publish 37015:37015/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall" --env NS_SERVER_NAME="[%s]%s" --env NS_SERVER_DESC="%s" --env NS_SERVER_PASSWORD="%d" --env NS_INSECURE="%s" ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0
-`, dockerImage, serverRegion, serverName, serverDesc, serverPin, insecure)
-}
-
 func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsserver.NSServer, regionID string, tag string) error {
 	// Create a base64 encoded script that will: Download northstar container, and Titanfall2 files from git, to startup the server
-	cmd := base64.StdEncoding.EncodeToString([]byte(formatScript(dockerImage, server.Region, server.Name, "Competitive LTS!! Yay!", *server.Pin, "1")))
+
+	s, err := util.FormatScript(ctx, server, "Competitive LTS!! Yay!", "1")
+	if err != nil {
+		return fmt.Errorf("failed to generate formatted script: %w", err)
+	}
+
+	cmd := base64.StdEncoding.EncodeToString([]byte(s))
 
 	script := &govultr.StartupScriptReq{
 		Name:   server.Name,

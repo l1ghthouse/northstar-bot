@@ -3,10 +3,13 @@ package discord
 import (
 	"context"
 	"fmt"
+	"github.com/sethvargo/go-password/password"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"gorm.io/datatypes"
 
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
 
@@ -32,6 +35,11 @@ var (
 					Name:        "region",
 					Description: "region in which the server will be created",
 					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        nsserver.OptionRebalancedLTSMod,
+					Description: "Indicated that the server should include Dinorush's rebalanced mod",
 				},
 			},
 		},
@@ -60,6 +68,8 @@ type handler struct {
 	autoDeleteDuration   time.Duration
 	nsRepo               nsserver.Repo
 }
+
+const PinLength = 5
 
 func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
@@ -108,12 +118,26 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		return
 	}
 
+	isRebalanced := false
+	if len(interaction.ApplicationCommandData().Options) == 2 {
+		isRebalanced = interaction.ApplicationCommandData().Options[1].BoolValue()
+	}
+
+	pin, err := strconv.Atoi(password.MustGenerate(PinLength, PinLength, 0, false, true))
+	if err != nil {
+		sendMessage(session, interaction, fmt.Sprintf("failed to generate pin: %v", err))
+		return
+	}
+
 	server := &nsserver.NSServer{
 		Region:      interaction.ApplicationCommandData().Options[0].StringValue(),
 		RequestedBy: interaction.Member.User.ID,
 		Name:        name,
+		Pin:         &pin,
+		Options: datatypes.JSONMap{
+			nsserver.OptionRebalancedLTSMod: isRebalanced,
+		},
 	}
-
 	err = h.p.CreateServer(ctx, server)
 	if err != nil {
 		sendMessage(session, interaction, fmt.Sprintf("failed to create the target server. error: %v", err))
@@ -156,9 +180,7 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 
 	err = h.nsRepo.DeleteByName(ctx, serverName)
 	if err != nil {
-		sendMessage(session, interaction, fmt.Sprintf("Unable to delete server from the database: %v", err))
-
-		return
+		log.Println(fmt.Sprintf("unable to delete server from the database: %v", err))
 	}
 
 	sendMessage(session, interaction, fmt.Sprintf("deleted server %s", serverName))
@@ -184,6 +206,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 			if server.Name == cached.Name {
 				server.Pin = cached.Pin
 				server.RequestedBy = cached.RequestedBy
+				server.Options = cached.Options
 				break
 			}
 		}
@@ -197,10 +220,6 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		return
 	}
 	for idx, server := range nsservers {
-		untilDeleted := ""
-		if h.autoDeleteDuration > time.Duration(0) {
-			untilDeleted = fmt.Sprintf(". Time until deleted: %s", (h.autoDeleteDuration - time.Since(server.CreatedAt)).String())
-		}
 		pin := "unknown"
 		if server.Pin != nil {
 			pin = strconv.Itoa(*server.Pin)
@@ -209,8 +228,32 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		if server.RequestedBy != "" {
 			user = server.RequestedBy
 		}
-
-		servers[idx] = fmt.Sprintf("%s in %s. PIN: `%s`. Requested by <@%s>", server.Name, server.Region, pin, user) + untilDeleted
+		options := ""
+		if server.Options != nil {
+			json, err := server.Options.MarshalJSON()
+			if err != nil {
+				options = fmt.Sprintf("failed to parse servers options. error: %v", err)
+			} else {
+				options = string(json)
+			}
+		}
+		builder := strings.Builder{}
+		builder.WriteString(fmt.Sprintf("Name: %s", server.Name))
+		builder.WriteString("\n")
+		builder.WriteString(fmt.Sprintf("Region: %s", server.Region))
+		builder.WriteString("\n")
+		builder.WriteString(fmt.Sprintf("Pin: `%s`", pin))
+		builder.WriteString("\n")
+		builder.WriteString(fmt.Sprintf("Requested by: <@%s>", user))
+		builder.WriteString("\n")
+		if options != "" {
+			builder.WriteString(fmt.Sprintf("Options: \n```\n%s```\n", options))
+		}
+		if h.autoDeleteDuration > time.Duration(0) {
+			builder.WriteString(fmt.Sprintf("Time until deleted: %s", (h.autoDeleteDuration - time.Since(server.CreatedAt)).String()))
+		}
+		builder.WriteString("\n\n")
+		servers[idx] = builder.String()
 	}
 
 	sendMessage(session, interaction, strings.Join(servers, "\n"))
