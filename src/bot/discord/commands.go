@@ -156,7 +156,12 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		autodeleteMessage = fmt.Sprintf("\nThis server will be deleted in %s", h.autoDeleteDuration.String())
 	}
 
-	sendMessage(session, interaction, fmt.Sprintf("created server %s in %s, with password: `%d`. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, *server.Pin)+autodeleteMessage)
+	rebalancedLTSModNotice := ""
+	if isRebalanced {
+		rebalancedLTSModNotice = "\nNOTE: This server includes the rebalanced LTS mod.\nEnsure you have the latest version of the mod installed."
+	}
+
+	sendMessage(session, interaction, fmt.Sprintf("created server %s in %s, with password: `%d`. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, *server.Pin)+autodeleteMessage+rebalancedLTSModNotice)
 }
 
 func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
