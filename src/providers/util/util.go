@@ -23,6 +23,7 @@ func CreateFunnyName() string {
 const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.4.0"
 const LTSRebalancedRepoOwner = "Dinorush"
 const LTSRebalancedRepoName = "LTSRebalance"
+const OptionLTSRebalancedVersion = "lts_rebalanced_version"
 
 var ErrNoLTSRebalancedTags = fmt.Errorf("no LTSRebalanced tags found")
 
@@ -41,6 +42,8 @@ func FormatScript(ctx context.Context, server *nsserver.NSServer, serverDesc str
 		} else {
 			return "", ErrNoLTSRebalancedTags
 		}
+
+		server.Options[OptionLTSRebalancedVersion] = latestTag.GetName()
 
 		builder := strings.Builder{}
 		builder.WriteString("apt install -y unzip")

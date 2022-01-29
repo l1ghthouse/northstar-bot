@@ -158,7 +158,8 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 
 	rebalancedLTSModNotice := ""
 	if isRebalanced {
-		rebalancedLTSModNotice = "\nNOTE: This server includes the rebalanced LTS mod.\nEnsure you have the latest version of the mod installed."
+		version := server.Options[util.OptionLTSRebalancedVersion].(string)
+		rebalancedLTSModNotice = fmt.Sprintf("\nNOTE: This server includes the rebalanced LTS mod version: **%s**.\nEnsure you have the latest version of the mod installed.", version)
 	}
 
 	sendMessage(session, interaction, fmt.Sprintf("created server %s in %s, with password: `%d`. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, *server.Pin)+autodeleteMessage+rebalancedLTSModNotice)
