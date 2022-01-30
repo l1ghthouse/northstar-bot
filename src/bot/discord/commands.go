@@ -166,15 +166,18 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 }
 
 func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+	ctx := context.Background()
+	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
 	permissions := interaction.Member.Permissions
 	if permissions&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
-		sendMessage(session, interaction, "You don't have permission to delete servers")
+		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
+		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
+			sendMessage(session, interaction, "You don't have permission to delete this server")
 
-		return
+			return
+		}
 	}
 
-	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
-	ctx := context.Background()
 	err := h.p.DeleteServer(ctx, &nsserver.NSServer{
 		Name: serverName,
 	})
