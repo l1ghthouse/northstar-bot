@@ -172,7 +172,7 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 	if permissions&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
 		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
 		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-			sendMessage(session, interaction, "You don't have permission to delete this server")
+			sendMessage(session, interaction, "Only Administrators and the person who requested the server can delete it")
 
 			return
 		}
