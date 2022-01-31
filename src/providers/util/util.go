@@ -55,7 +55,7 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 		builder.WriteString(fmt.Sprintf("unzip Dinorush.LTSRebalance_%s.zip -d /", latestTag.GetName()))
 		builder.WriteString("\n")
 		OptionalCmd = builder.String()
-		DockerArgs = "--mount \"type=bind,source=/Dinorush.LTSRebalance,target=/mnt/mods/Dinorush.LTSRebalance\""
+		DockerArgs = "--mount \"type=bind,source=/Dinorush.LTSRebalance,target=/mnt/mods/Dinorush.LTSRebalance,readonly\""
 	}
 
 	return fmt.Sprintf(`#!/bin/bash
@@ -86,7 +86,7 @@ curl -L "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp" -s 
 
 %s
 
-docker run -d --pull always --publish 8081:8081/tcp --publish 37015:37015/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall" %s --env NS_SERVER_NAME="[%s]%s" --env NS_SERVER_DESC="%s" --env NS_SERVER_PASSWORD="%d" --env NS_INSECURE="%s" --name "%s" $IMAGE
+docker run -d --pull always --publish 8081:8081/tcp --publish 37015:37015/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME="[%s]%s" --env NS_SERVER_DESC="%s" --env NS_SERVER_PASSWORD="%d" --env NS_INSECURE="%s" --name "%s" $IMAGE
 `, dockerImage, OptionalCmd, DockerArgs, server.Region, server.Name, serverDesc, *server.Pin, insecure, containerName), nil
 }
 
