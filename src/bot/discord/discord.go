@@ -7,11 +7,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/bwmarrin/discordgo"
 	"github.com/l1ghthouse/northstar-bootstrap/src/bot/notifyer"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
-
-	"github.com/bwmarrin/discordgo"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers"
+	"github.com/paulbellamy/ratecounter"
 )
 
 type Config struct {
@@ -27,18 +27,22 @@ type discordBot struct {
 	closeChannels []chan struct{}
 }
 
-func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, maxConcurrentServers uint, autoDeleteDuration time.Duration) (notifyer.Notifyer, error) {
+func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, maxConcurrentServers, maxServersPerHour uint, autoDeleteDuration time.Duration) (notifyer.Notifyer, error) {
 	discordClient, err := discordgo.New("Bot " + d.config.DcBotToken)
 	if err != nil {
 		log.Fatal("Error creating Discord session: ", err)
 	}
-
-	h := handler{p: provider, maxConcurrentServers: maxConcurrentServers, autoDeleteDuration: autoDeleteDuration, nsRepo: nsRepo}
+	var counter *ratecounter.RateCounter
+	if maxServersPerHour != 0 {
+		counter = ratecounter.NewRateCounter(time.Hour)
+	}
+	botHandler := handler{p: provider, maxConcurrentServers: maxConcurrentServers, autoDeleteDuration: autoDeleteDuration, nsRepo: nsRepo, maxServerCreateRate: maxServersPerHour, rateCounter: counter}
 
 	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){}
-	commandHandlers[CreateServer] = h.handleCreateServer
-	commandHandlers[ListServer] = h.handleListServer
-	commandHandlers[DeleteServer] = h.handleDeleteServer
+	commandHandlers[CreateServer] = botHandler.handleCreateServer
+	commandHandlers[ListServer] = botHandler.handleListServer
+	commandHandlers[DeleteServer] = botHandler.handleDeleteServer
+	commandHandlers[ExtractLogs] = botHandler.handleExtractLogs
 
 	discordClient.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {

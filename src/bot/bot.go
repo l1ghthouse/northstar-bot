@@ -12,7 +12,7 @@ import (
 )
 
 type Bot interface {
-	Start(provider providers.Provider, repo nsserver.Repo, maxConcurrentServers uint, autoDeleteDuration time.Duration) (notifyer.Notifyer, error)
+	Start(provider providers.Provider, repo nsserver.Repo, maxConcurrentServers uint, MaxServersPerHour uint, autoDeleteDuration time.Duration) (notifyer.Notifyer, error)
 	Stop()
 }
 

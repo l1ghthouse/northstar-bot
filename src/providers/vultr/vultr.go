@@ -1,17 +1,20 @@
 package vultr
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 	"time"
 
-	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
-
+	"github.com/bramvdbogaerde/go-scp"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
+	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
 	"github.com/vultr/govultr/v2"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/oauth2"
 )
 
@@ -83,6 +86,12 @@ func (v Vultr) GetRunningServers(ctx context.Context) ([]*nsserver.NSServer, err
 	return ns, nil
 }
 
+func (v Vultr) ExtractServerLogs(ctx context.Context, server *nsserver.NSServer) (io.Reader, error) {
+	vClient := newVultrClient(ctx, v.key)
+
+	return vClient.extractServerLogs(ctx, server.Name, server.DefaultPassword, v.Tag)
+}
+
 func NewVultrProvider(cfg Config) (*Vultr, error) {
 	return &Vultr{key: cfg.APIKey, Tag: cfg.Tag}, nil
 }
@@ -102,6 +111,66 @@ func newVultrClient(ctx context.Context, apiKey string) *vultrClient {
 	return &vultrClient{
 		client: client(ctx, apiKey),
 	}
+}
+
+var user = "root"
+var activeStatus = "active"
+var sshPort = "22"
+
+func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, password string, tag string) (io.Reader, error) {
+	instance, err := v.getVultrInstanceByName(ctx, serverName, tag)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get vultr instance by name: %w", err)
+	}
+
+	if instance.Status != activeStatus {
+		return nil, fmt.Errorf("vultr instance is not active")
+	}
+
+	//nolint:gosec
+	sshConfig := &ssh.ClientConfig{
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.Password(password)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", instance.MainIP, sshPort), sshConfig)
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect to vultr instance: %w", err)
+	}
+
+	sshSession, err := sshClient.NewSession()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create ssh session: %w", err)
+	}
+	defer func() {
+		err := sshClient.Close()
+		if err != nil {
+			log.Printf("unable to close ssh client: %v", err)
+		}
+	}()
+	scpClient, err := scp.NewClientBySSH(sshClient)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create scp client: %w", err)
+	}
+	output, err := sshSession.CombinedOutput(util.FormatLogExtractionScript())
+	if err != nil {
+		return nil, fmt.Errorf("unable to extract logs: %w, output: %s", err, string(output))
+	}
+
+	buffer := bytes.NewBuffer(nil)
+
+	file := &util.CappedBuffer{
+		Cap:   7340032, // 7MB
+		MyBuf: buffer,
+	}
+
+	err = scpClient.CopyFromRemotePassThru(ctx, file, util.RemoteFile, nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to copy logs from remote: %w", err)
+	}
+
+	return file.MyBuf, nil
 }
 
 func (v *vultrClient) getVultrRegionByCity(ctx context.Context, region string) (govultr.Region, error) {
@@ -137,10 +206,23 @@ func (v *vultrClient) getVultrInstances(ctx context.Context, tag string) ([]govu
 	return list, nil
 }
 
+func (v *vultrClient) getVultrInstanceByName(ctx context.Context, serverName string, tag string) (*govultr.Instance, error) {
+	instances, err := v.getVultrInstances(ctx, tag)
+	if err != nil {
+		return nil, err
+	}
+	for _, instance := range instances {
+		if instance.Label == serverName {
+			return &instance, nil
+		}
+	}
+	return nil, fmt.Errorf("no instance found for %s", serverName)
+}
+
 func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsserver.NSServer, regionID string, tag string) error {
 	// Create a base64 encoded script that will: Download northstar container, and Titanfall2 files from git, to startup the server
 
-	s, err := util.FormatScript(ctx, server, "Competitive LTS!! Yay!", "1")
+	s, err := util.FormatStartupScript(ctx, server, "Competitive LTS!! Yay!", "1")
 	if err != nil {
 		return fmt.Errorf("failed to generate formatted script: %w", err)
 	}
@@ -178,6 +260,7 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 	if err != nil {
 		return fmt.Errorf("failed to parse date: %w", err)
 	}
+	server.DefaultPassword = instance.DefaultPassword
 	return nil
 }
 
@@ -190,11 +273,6 @@ func (v *vultrClient) listStartupScripts(ctx context.Context) ([]govultr.Startup
 }
 
 func (v *vultrClient) deleteNorthstarInstance(ctx context.Context, serverName string, tag string) error {
-	instances, err := v.getVultrInstances(ctx, tag)
-	if err != nil {
-		return fmt.Errorf("unable to list running instances: %w", err)
-	}
-
 	scripts, err := v.listStartupScripts(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to list startup scripts: %w", err)
@@ -209,15 +287,13 @@ func (v *vultrClient) deleteNorthstarInstance(ctx context.Context, serverName st
 		}
 	}
 
-	for _, instance := range instances {
-		if instance.Label == serverName {
-			err = v.client.Instance.Delete(ctx, instance.ID)
-			if err != nil {
-				return fmt.Errorf("unable to delete instance: %w", err)
-			}
-			return nil
-		}
+	instance, err := v.getVultrInstanceByName(ctx, serverName, tag)
+	if err != nil {
+		return fmt.Errorf("unable to list running instances: %w", err)
 	}
-
-	return fmt.Errorf("no instance found for %s", serverName)
+	err = v.client.Instance.Delete(ctx, instance.ID)
+	if err != nil {
+		return fmt.Errorf("unable to delete instance: %w", err)
+	}
+	return nil
 }

@@ -2,12 +2,16 @@ package discord
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/sethvargo/go-password/password"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/paulbellamy/ratecounter"
+
+	"github.com/sethvargo/go-password/password"
 
 	"gorm.io/datatypes"
 
@@ -22,6 +26,7 @@ const (
 	CreateServer string = "create_server"
 	ListServer   string = "list_servers"
 	DeleteServer string = "delete_server"
+	ExtractLogs  string = "extract_logs"
 )
 
 var (
@@ -56,6 +61,18 @@ var (
 			},
 		},
 		{
+			Name:        ExtractLogs,
+			Description: "Command to extract logs from a server",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "name",
+					Description: "server name from which logs are to be extracted",
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        ListServer,
 			Description: "Command to list servers",
 		},
@@ -67,12 +84,21 @@ type handler struct {
 	maxConcurrentServers uint
 	autoDeleteDuration   time.Duration
 	nsRepo               nsserver.Repo
+	maxServerCreateRate  uint
+	rateCounter          *ratecounter.RateCounter
 }
 
+const unknown = "unknown"
 const PinLength = 5
 
 func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
+
+	if h.maxServerCreateRate != 0 && !isAdministrator(interaction.Member.Permissions) {
+		if h.rateCounter.Rate() > int64(h.maxServerCreateRate) {
+			sendMessage(session, interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
+		}
+	}
 	servers, err := h.p.GetRunningServers(ctx)
 	if err != nil {
 		sendMessage(session, interaction, fmt.Sprintf("Unable to list running servers: %v", err))
@@ -84,40 +110,18 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 
 		return
 	}
-
 	cachedServers, err := h.nsRepo.GetAll(ctx)
 	if err != nil {
 		sendMessage(session, interaction, fmt.Sprintf("Unable to list servers: %v", err))
 
 		return
 	}
-	var unique bool
-	name := ""
-	for i := 0; i < 5; i++ {
-		unique = true
-		name = util.CreateFunnyName()
-		for _, server := range servers {
-			if server.Name == name {
-				unique = false
-			}
-		}
-
-		for _, server := range cachedServers {
-			if server.Name == name {
-				unique = false
-			}
-		}
-		if unique {
-			break
-		}
-	}
-
-	if !unique {
-		sendMessage(session, interaction, "Unable to generate a unique name for the server, please try again")
+	name, err := generateUniqueName(servers, cachedServers)
+	if err != nil {
+		sendMessage(session, interaction, fmt.Sprintf("Unable to generate unique server name: %v", err))
 
 		return
 	}
-
 	isRebalanced := false
 	if len(interaction.ApplicationCommandData().Options) == 2 {
 		isRebalanced = interaction.ApplicationCommandData().Options[1].BoolValue()
@@ -158,18 +162,58 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 
 	rebalancedLTSModNotice := ""
 	if isRebalanced {
-		version := server.Options[util.OptionLTSRebalancedVersion].(string)
+		version, ok := server.Options[util.OptionLTSRebalancedVersion].(string)
+		if !ok {
+			version = unknown
+		}
 		rebalancedLTSModNotice = fmt.Sprintf("\nNOTE: This server includes the rebalanced LTS mod version: **%s**.\nEnsure you have the latest version of the mod installed.", version)
 	}
 
 	sendMessage(session, interaction, fmt.Sprintf("created server %s in %s, with password: `%d`. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, *server.Pin)+autodeleteMessage+rebalancedLTSModNotice)
+
+	if h.maxServerCreateRate != 0 {
+		h.rateCounter.Incr(1)
+	}
+}
+
+var ErrUnableToGenerateUniqueName = errors.New("unable to generate unique name")
+
+func generateUniqueName(servers []*nsserver.NSServer, cachedServers []*nsserver.NSServer) (string, error) {
+	var unique bool
+	name := ""
+	for i := 0; i < 5; i++ {
+		unique = true
+		name = util.CreateFunnyName()
+		for _, server := range servers {
+			if server.Name == name {
+				unique = false
+			}
+		}
+
+		for _, server := range cachedServers {
+			if server.Name == name {
+				unique = false
+			}
+		}
+		if unique {
+			break
+		}
+	}
+
+	if !unique {
+		return "", ErrUnableToGenerateUniqueName
+	}
+	return name, nil
+}
+
+func isAdministrator(permissions int64) bool {
+	return permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator
 }
 
 func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
-	permissions := interaction.Member.Permissions
-	if permissions&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+	if !isAdministrator(interaction.Member.Permissions) {
 		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
 		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
 			sendMessage(session, interaction, "Only Administrators and the person who requested the server can delete it")
@@ -229,11 +273,11 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		return
 	}
 	for idx, server := range nsservers {
-		pin := "unknown"
+		pin := unknown
 		if server.Pin != nil {
 			pin = strconv.Itoa(*server.Pin)
 		}
-		user := "unknown"
+		user := unknown
 		if server.RequestedBy != "" {
 			user = server.RequestedBy
 		}
@@ -266,6 +310,54 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 	}
 
 	sendMessage(session, interaction, strings.Join(servers, "\n"))
+}
+
+func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+	ctx := context.Background()
+	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
+
+	server, err := h.nsRepo.GetByName(ctx, serverName)
+	if err != nil {
+		sendMessage(session, interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+
+		return
+	}
+
+	sendMessage(session, interaction, fmt.Sprintf("Extracting logs for %s. They will be sent to you privately once they are ready", serverName))
+
+	file, err := h.p.ExtractServerLogs(ctx, server)
+	if err != nil {
+		sendMessageWithFilesDM(session, interaction, fmt.Sprintf("failed to extract logs from target server. error: %v", err), nil)
+
+		return
+	}
+
+	files := []*discordgo.File{{
+		Name:        fmt.Sprintf("%s.log.zip", server.Name),
+		ContentType: "application/octet-stream",
+		Reader:      file,
+	}}
+
+	sendMessageWithFilesDM(session, interaction, fmt.Sprintf("logs extracted from server %s", serverName), files)
+}
+
+func sendMessageWithFilesDM(session *discordgo.Session, interaction *discordgo.InteractionCreate, msg string, file []*discordgo.File) {
+	directMessageChannel, err := session.UserChannelCreate(interaction.Member.User.ID)
+	if err != nil {
+		log.Println(fmt.Sprintf("failed to create DM channel for user %s. error: %v", interaction.Member.User.ID, err))
+
+		return
+	}
+	_, err = session.ChannelMessageSendComplex(directMessageChannel.ID, &discordgo.MessageSend{
+		Content: msg,
+		Files:   file,
+	})
+
+	if err != nil {
+		log.Println(fmt.Sprintf("failed to send message to user %s. error: %v", interaction.Member.User.ID, err))
+
+		return
+	}
 }
 
 func sendMessage(s *discordgo.Session, i *discordgo.InteractionCreate, msg string) {

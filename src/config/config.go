@@ -11,6 +11,7 @@ type Config struct {
 	Bot                    bot.Config
 	DB                     storage.Config
 	MaxConcurrentInstances uint `default:"1"`
+	MaxServersPerHour      int  `default:"-1"`
 	MaxLifetimeSeconds     uint `default:"6900"` // 2 hours - 5 minutes, since vultr charges hourly
 }
 

@@ -46,21 +46,21 @@ func (d *autoDeleteManager) AutoDelete() {
 		}
 
 		for _, server := range servers {
-			found := false
-			for _, cached := range cachedServers {
-				if server.Name == cached.Name {
-					found = true
-					break
-				}
-			}
-			if !found {
-				err := d.repo.DeleteByName(ctx, server.Name)
-				if err != nil {
-					log.Println("error deleting cached server: ", err)
-					continue
-				}
-			}
 			if time.Since(server.CreatedAt) > d.maxLifetime {
+				found := false
+				for _, cached := range cachedServers {
+					if server.Name == cached.Name {
+						found = true
+						break
+					}
+				}
+				if !found {
+					err := d.repo.DeleteByName(ctx, server.Name)
+					if err != nil {
+						log.Println("error deleting cached server: ", err)
+						continue
+					}
+				}
 				d.deleteAndNotify(ctx, server)
 			}
 		}

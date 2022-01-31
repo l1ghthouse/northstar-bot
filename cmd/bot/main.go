@@ -60,7 +60,15 @@ func main() {
 		log.Fatal("ContainerMaxLifetimeSeconds must be greater than 10 minutes, or 0 to disable auto-delete")
 	}
 
-	notifyer, err := newBot.Start(provider, nsRepo, cfg.MaxConcurrentInstances, autoDeleteDuration)
+	var maxServerRate uint
+
+	if cfg.MaxServersPerHour < 0 {
+		maxServerRate = cfg.MaxConcurrentInstances * 2
+	} else {
+		maxServerRate = uint(cfg.MaxServersPerHour)
+	}
+
+	notifyer, err := newBot.Start(provider, nsRepo, cfg.MaxConcurrentInstances, maxServerRate, autoDeleteDuration)
 	if err != nil {
 		log.Fatal("Error starting the bot: ", err)
 	}
