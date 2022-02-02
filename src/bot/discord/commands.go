@@ -166,7 +166,15 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		if !ok {
 			version = unknown
 		}
-		rebalancedLTSModNotice = fmt.Sprintf("\nNOTE: This server includes the rebalanced LTS mod version: **%s**.\nEnsure you have the latest version of the mod installed.", version)
+
+		downloadLink, ok := server.Options[util.OptionLTSRebalancedDownloadLink].(string)
+		if !ok {
+			downloadLink = unknown
+		}
+
+		rebalancedLTSModNotice = fmt.Sprintf(`
+NOTE: This server includes the rebalanced LTS mod version: **%s**.
+You can download **%s** mod version using this link: <%s>`, version, version, downloadLink)
 	}
 
 	sendMessage(session, interaction, fmt.Sprintf("created server **%s** in **%s**, with password: **%d**. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, *server.Pin)+autodeleteMessage+rebalancedLTSModNotice)

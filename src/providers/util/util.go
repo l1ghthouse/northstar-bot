@@ -25,6 +25,7 @@ const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.4.0"
 const LTSRebalancedRepoOwner = "Dinorush"
 const LTSRebalancedRepoName = "LTSRebalance"
 const OptionLTSRebalancedVersion = "lts_rebalanced_version"
+const OptionLTSRebalancedDownloadLink = "lts_rebalanced_download_link"
 const containerName = "northstar-dedicated"
 
 var ErrNoLTSRebalancedTags = fmt.Errorf("no LTSRebalanced tags found")
@@ -44,13 +45,14 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 		} else {
 			return "", ErrNoLTSRebalancedTags
 		}
-
+		link := fmt.Sprintf("https://github.com/Dinorush/LTSRebalance/releases/download/%s/Dinorush.LTSRebalance_%s.zip", latestTag.GetName(), latestTag.GetName())
 		server.Options[OptionLTSRebalancedVersion] = latestTag.GetName()
+		server.Options[OptionLTSRebalancedDownloadLink] = link
 
 		builder := strings.Builder{}
 		builder.WriteString("apt install -y unzip zip")
 		builder.WriteString("\n")
-		builder.WriteString(fmt.Sprintf("wget https://github.com/Dinorush/LTSRebalance/releases/download/%s/Dinorush.LTSRebalance_%s.zip", latestTag.GetName(), latestTag.GetName()))
+		builder.WriteString(fmt.Sprintf("wget %s", link))
 		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("unzip Dinorush.LTSRebalance_%s.zip -d /", latestTag.GetName()))
 		builder.WriteString("\n")
