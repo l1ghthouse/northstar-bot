@@ -50,8 +50,6 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 		server.Options[OptionLTSRebalancedDownloadLink] = link
 
 		builder := strings.Builder{}
-		builder.WriteString("apt install -y unzip zip")
-		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("wget %s", link))
 		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("unzip Dinorush.LTSRebalance_%s.zip -d /", latestTag.GetName()))
@@ -65,7 +63,7 @@ IMAGE=%s
 docker pull $IMAGE
 
 apt update -y
-apt install parallel jq -y
+apt install parallel jq unzip zip -y
 
 echo "Downloading Titanfall2 Files"
 
