@@ -5,9 +5,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 
-	"github.com/google/go-github/v42/github"
+	"github.com/l1ghthouse/northstar-bootstrap/src/mod"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"github.com/lucasepe/codename"
 )
@@ -22,40 +21,27 @@ func CreateFunnyName() string {
 }
 
 const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.4.0"
-const LTSRebalancedRepoOwner = "Dinorush"
-const LTSRebalancedRepoName = "LTSRebalance"
-const OptionLTSRebalancedVersion = "lts_rebalanced_version"
-const OptionLTSRebalancedDownloadLink = "lts_rebalanced_download_link"
 const containerName = "northstar-dedicated"
-
-var ErrNoLTSRebalancedTags = fmt.Errorf("no LTSRebalanced tags found")
+const VersionPostfix = "_version"
+const LinkPostfix = "_link"
 
 func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverDesc string, insecure string) (string, error) {
 	OptionalCmd := ""
 	DockerArgs := ""
-	if server.Options[nsserver.OptionRebalancedLTSMod].(bool) {
-		var latestTag *github.RepositoryTag
-		client := github.NewClient(nil)
-		tags, _, err := client.Repositories.ListTags(ctx, LTSRebalancedRepoOwner, LTSRebalancedRepoName, nil)
-		if err != nil {
-			return "", fmt.Errorf("error listing tags: %w", err)
+	for serverOptions, v := range server.Options {
+		for modName, generator := range mod.ModByName {
+			if serverOptions == modName && v.(bool) {
+				m := generator()
+				cmd, args, link, tag, err := m.ModParams(ctx)
+				if err != nil {
+					return "", fmt.Errorf("error generating mod: %w", err)
+				}
+				OptionalCmd = OptionalCmd + "\n" + cmd
+				DockerArgs = DockerArgs + " " + args + " "
+				server.Options[serverOptions+VersionPostfix] = tag
+				server.Options[serverOptions+LinkPostfix] = link
+			}
 		}
-		if len(tags) > 0 {
-			latestTag = tags[0]
-		} else {
-			return "", ErrNoLTSRebalancedTags
-		}
-		link := fmt.Sprintf("https://github.com/Dinorush/LTSRebalance/releases/download/%s/Dinorush.LTSRebalance_%s.zip", latestTag.GetName(), latestTag.GetName())
-		server.Options[OptionLTSRebalancedVersion] = latestTag.GetName()
-		server.Options[OptionLTSRebalancedDownloadLink] = link
-
-		builder := strings.Builder{}
-		builder.WriteString(fmt.Sprintf("wget %s", link))
-		builder.WriteString("\n")
-		builder.WriteString(fmt.Sprintf("unzip Dinorush.LTSRebalance_%s.zip -d /", latestTag.GetName()))
-		builder.WriteString("\n")
-		OptionalCmd = builder.String()
-		DockerArgs = "--mount \"type=bind,source=/Dinorush.LTSRebalance,target=/mnt/mods/Dinorush.LTSRebalance,readonly\""
 	}
 
 	return fmt.Sprintf(`#!/bin/bash

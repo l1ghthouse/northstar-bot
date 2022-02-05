@@ -9,13 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l1ghthouse/northstar-bootstrap/src/mod"
+	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
+
 	"github.com/paulbellamy/ratecounter"
 
 	"github.com/sethvargo/go-password/password"
-
-	"gorm.io/datatypes"
-
-	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
@@ -29,24 +28,30 @@ const (
 	ExtractLogs  string = "extract_logs"
 )
 
+func modApplicationCommand() (options []*discordgo.ApplicationCommandOption) {
+	for k := range mod.ModByName {
+		options = append(options, &discordgo.ApplicationCommandOption{
+			Type:        discordgo.ApplicationCommandOptionBoolean,
+			Name:        k,
+			Description: fmt.Sprintf("Indicated that the server should include %s mod", k),
+		})
+	}
+	return
+}
+
 var (
 	commands = []*discordgo.ApplicationCommand{
 		{
 			Name:        CreateServer,
 			Description: "Command to create a server",
-			Options: []*discordgo.ApplicationCommandOption{
+			Options: append([]*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "region",
 					Description: "region in which the server will be created",
 					Required:    true,
 				},
-				{
-					Type:        discordgo.ApplicationCommandOptionBoolean,
-					Name:        nsserver.OptionRebalancedLTSMod,
-					Description: "Indicated that the server should include Dinorush's rebalanced mod",
-				},
-			},
+			}, modApplicationCommand()...),
 		},
 		{
 			Name:        DeleteServer,
@@ -122,9 +127,16 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 
 		return
 	}
-	isRebalanced := false
-	if len(interaction.ApplicationCommandData().Options) == 2 {
-		isRebalanced = interaction.ApplicationCommandData().Options[1].BoolValue()
+	var modOptions = make(map[string]interface{})
+	for modName := range mod.ModByName {
+		modOptions[modName] = false
+		for _, option := range interaction.ApplicationCommandData().Options {
+			if option.Name == modName {
+				modOptions[modName] = true
+				modOptions[modName] = option.BoolValue()
+				break
+			}
+		}
 	}
 
 	pin, err := strconv.Atoi(password.MustGenerate(PinLength, PinLength, 0, false, true))
@@ -138,9 +150,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		RequestedBy: interaction.Member.User.ID,
 		Name:        name,
 		Pin:         &pin,
-		Options: datatypes.JSONMap{
-			nsserver.OptionRebalancedLTSMod: isRebalanced,
-		},
+		Options:     modOptions,
 	}
 	err = h.p.CreateServer(ctx, server)
 	if err != nil {
@@ -160,24 +170,22 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		autodeleteMessage = fmt.Sprintf("\nThis server will be deleted in %s", h.autoDeleteDuration.String())
 	}
 
-	rebalancedLTSModNotice := ""
-	if isRebalanced {
-		version, ok := server.Options[util.OptionLTSRebalancedVersion].(string)
-		if !ok {
-			version = unknown
-		}
+	modInfo := ""
 
-		downloadLink, ok := server.Options[util.OptionLTSRebalancedDownloadLink].(string)
-		if !ok {
-			downloadLink = unknown
+	for option := range server.Options {
+		for modName := range mod.ModByName {
+			if option == modName && server.Options[option].(bool) {
+				modInfo += fmt.Sprintf("%s: version: **%s**. Download link: <%s>\n", modName, server.Options[modName+util.VersionPostfix], server.Options[modName+util.LinkPostfix])
+			}
 		}
-
-		rebalancedLTSModNotice = fmt.Sprintf(`
-NOTE: This server includes the rebalanced LTS mod version: **%s**.
-You can download **%s** mod version using this link: <%s>`, version, version, downloadLink)
 	}
 
-	sendMessage(session, interaction, fmt.Sprintf("created server **%s** in **%s**, with password: **%d**. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, *server.Pin)+autodeleteMessage+rebalancedLTSModNotice)
+	modNotice := ""
+	if modInfo != "" {
+		modNotice = "\nNOTE: This server includes the following mods:\n" + modInfo
+	}
+
+	sendMessage(session, interaction, fmt.Sprintf("created server **%s** in **%s**, with password: **%d**. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, *server.Pin)+autodeleteMessage+modNotice)
 
 	if h.maxServerCreateRate != 0 {
 		h.rateCounter.Incr(1)

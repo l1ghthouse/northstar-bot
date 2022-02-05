@@ -9,8 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const OptionRebalancedLTSMod = "rebalanced_lts_mod"
-
 type NSServer struct {
 	ID              uuid.UUID         `json:"id,omitempty" gorm:"type:uuid;primary_key;"`
 	Name            string            `json:"name" gorm:"not null;default:null"`
