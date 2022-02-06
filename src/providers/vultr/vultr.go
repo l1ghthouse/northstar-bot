@@ -46,6 +46,12 @@ func (v Vultr) CreateServer(ctx context.Context, server *nsserver.NSServer) erro
 	return nil
 }
 
+func (v Vultr) RestartServer(ctx context.Context, server *nsserver.NSServer) error {
+	c := newVultrClient(ctx, v.key)
+
+	return c.restartNorthstarInstance(ctx, server.Name, server.DefaultPassword, v.Tag)
+}
+
 func (v Vultr) DeleteServer(ctx context.Context, server *nsserver.NSServer) error {
 	c := newVultrClient(ctx, v.key)
 
@@ -117,6 +123,26 @@ var user = "root"
 var activeStatus = "active"
 var sshPort = "22"
 
+func generateSSHClient(mainIP, password string) (*ssh.Client, error) {
+	if password == "" {
+		return nil, fmt.Errorf("password is empty")
+	}
+
+	//nolint:gosec
+	sshConfig := &ssh.ClientConfig{
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.Password(password)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", mainIP, sshPort), sshConfig)
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect to vultr instance: %w", err)
+	}
+
+	return sshClient, nil
+}
+
 func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, password string, tag string) (io.Reader, error) {
 	instance, err := v.getVultrInstanceByName(ctx, serverName, tag)
 	if err != nil {
@@ -127,35 +153,21 @@ func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, 
 		return nil, fmt.Errorf("vultr instance is not active")
 	}
 
-	//nolint:gosec
-	sshConfig := &ssh.ClientConfig{
-		User:            user,
-		Auth:            []ssh.AuthMethod{ssh.Password(password)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", instance.MainIP, sshPort), sshConfig)
+	sshClient, err := generateSSHClient(instance.MainIP, password)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to vultr instance: %w", err)
+		return nil, err
 	}
 
 	sshSession, err := sshClient.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create ssh session: %w", err)
 	}
-	defer func() {
-		err := sshClient.Close()
-		if err != nil {
-			log.Printf("unable to close ssh client: %v", err)
-		}
-	}()
-	scpClient, err := scp.NewClientBySSH(sshClient)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create scp client: %w", err)
-	}
 	output, err := sshSession.CombinedOutput(util.FormatLogExtractionScript())
 	if err != nil {
 		return nil, fmt.Errorf("unable to extract logs: %w, output: %s", err, string(output))
+	}
+	if err := sshSession.Close(); err != nil {
+		log.Printf("unable to close ssh session: %v", err)
 	}
 
 	buffer := bytes.NewBuffer(nil)
@@ -165,6 +177,11 @@ func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, 
 		MyBuf: buffer,
 	}
 
+	scpClient, err := scp.NewClientBySSH(sshClient)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create scp client: %w", err)
+	}
+	defer scpClient.Close()
 	err = scpClient.CopyFromRemotePassThru(ctx, file, util.RemoteFile, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to copy logs from remote: %w", err)
@@ -270,6 +287,36 @@ func (v *vultrClient) listStartupScripts(ctx context.Context) ([]govultr.Startup
 		return nil, fmt.Errorf("unable to list startup scripts: %w", err)
 	}
 	return scripts, nil
+}
+
+func (v *vultrClient) restartNorthstarInstance(ctx context.Context, serverName string, password string, tag string) error {
+	instance, err := v.getVultrInstanceByName(ctx, serverName, tag)
+	if err != nil {
+		return fmt.Errorf("unable to get vultr instance by name: %w", err)
+	}
+
+	if instance.Status != activeStatus {
+		return fmt.Errorf("vultr instance is not active")
+	}
+
+	sshClient, err := generateSSHClient(instance.MainIP, password)
+	if err != nil {
+		return err
+	}
+
+	sshSession, err := sshClient.NewSession()
+	if err != nil {
+		return fmt.Errorf("unable to create ssh session: %w", err)
+	}
+	err = sshSession.Run(util.RestartServerScript())
+	if err != nil {
+		return fmt.Errorf("unable to restart the server: %w", err)
+	}
+	if err := sshSession.Close(); err != nil {
+		log.Printf("unable to close ssh session: %v", err)
+	}
+
+	return nil
 }
 
 func (v *vultrClient) deleteNorthstarInstance(ctx context.Context, serverName string, tag string) error {

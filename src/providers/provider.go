@@ -11,6 +11,7 @@ import (
 
 type Provider interface {
 	CreateServer(context.Context, *nsserver.NSServer) error
+	RestartServer(context.Context, *nsserver.NSServer) error
 	GetRunningServers(context.Context) ([]*nsserver.NSServer, error)
 	DeleteServer(context.Context, *nsserver.NSServer) error
 	ExtractServerLogs(context.Context, *nsserver.NSServer) (io.Reader, error)

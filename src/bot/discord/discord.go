@@ -43,6 +43,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 	commandHandlers[ListServer] = botHandler.handleListServer
 	commandHandlers[DeleteServer] = botHandler.handleDeleteServer
 	commandHandlers[ExtractLogs] = botHandler.handleExtractLogs
+	commandHandlers[RestartServer] = botHandler.handleRestartServer
 
 	discordClient.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {

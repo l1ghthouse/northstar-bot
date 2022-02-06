@@ -22,10 +22,11 @@ import (
 )
 
 const (
-	CreateServer string = "create_server"
-	ListServer   string = "list_servers"
-	DeleteServer string = "delete_server"
-	ExtractLogs  string = "extract_logs"
+	CreateServer  = "create_server"
+	ListServer    = "list_servers"
+	DeleteServer  = "delete_server"
+	ExtractLogs   = "extract_logs"
+	RestartServer = "restart_server"
 )
 
 func modApplicationCommand() (options []*discordgo.ApplicationCommandOption) {
@@ -61,6 +62,18 @@ var (
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "name",
 					Description: "server name to delete",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        RestartServer,
+			Description: "Command to restart the server",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "name",
+					Description: "server name to restart",
 					Required:    true,
 				},
 			},
@@ -253,6 +266,30 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 	}
 
 	sendMessage(session, interaction, fmt.Sprintf("deleted server %s", serverName))
+}
+
+func (h *handler) handleRestartServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+	ctx := context.Background()
+	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
+	if !isAdministrator(interaction.Member.Permissions) {
+		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
+		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
+			sendMessage(session, interaction, "Only Administrators and the person who requested the server can restart it")
+
+			return
+		}
+	}
+
+	err := h.p.RestartServer(ctx, &nsserver.NSServer{
+		Name: serverName,
+	})
+	if err != nil {
+		sendMessage(session, interaction, fmt.Sprintf("failed to restart the target server. error: %v", err))
+
+		return
+	}
+
+	sendMessage(session, interaction, fmt.Sprintf("restarted server %s", serverName))
 }
 
 func (h *handler) handleListServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {

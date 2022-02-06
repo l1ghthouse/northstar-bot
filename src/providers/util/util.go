@@ -25,6 +25,10 @@ const containerName = "northstar-dedicated"
 const VersionPostfix = "_version"
 const LinkPostfix = "_link"
 
+func RestartServerScript() string {
+	return fmt.Sprintf("docker restart %s", containerName)
+}
+
 func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverDesc string, insecure string) (string, error) {
 	OptionalCmd := ""
 	DockerArgs := ""
