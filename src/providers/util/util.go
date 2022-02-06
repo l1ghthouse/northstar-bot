@@ -76,8 +76,8 @@ curl -L "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp" -s 
 
 %s
 
-docker run -d --pull always --publish 8081:8081/tcp --publish 37015:37015/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME="[%s]%s" --env NS_SERVER_DESC="%s" --env NS_SERVER_PASSWORD="%d" --env NS_INSECURE="%s" --name "%s" $IMAGE
-`, dockerImage, OptionalCmd, DockerArgs, server.Region, server.Name, serverDesc, *server.Pin, insecure, containerName), nil
+docker run -d --pull always --publish 8081:8081/tcp --publish 37015:37015/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME="[%s]%s" --env NS_SERVER_DESC="%s" --env NS_SERVER_PASSWORD="%s" --env NS_INSECURE="%s" --name "%s" $IMAGE
+`, dockerImage, OptionalCmd, DockerArgs, server.Region, server.Name, serverDesc, server.Pin, insecure, containerName), nil
 }
 
 var RemoteFile = "/extract.zip"

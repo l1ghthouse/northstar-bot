@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 
@@ -107,7 +106,7 @@ type handler struct {
 }
 
 const unknown = "unknown"
-const PinLength = 5
+const PinLength = 4
 
 func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
@@ -152,17 +151,13 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		}
 	}
 
-	pin, err := strconv.Atoi(password.MustGenerate(PinLength, PinLength, 0, false, true))
-	if err != nil {
-		sendMessage(session, interaction, fmt.Sprintf("failed to generate pin: %v", err))
-		return
-	}
+	pin := password.MustGenerate(PinLength, PinLength, 0, false, true)
 
 	server := &nsserver.NSServer{
 		Region:      interaction.ApplicationCommandData().Options[0].StringValue(),
 		RequestedBy: interaction.Member.User.ID,
 		Name:        name,
-		Pin:         &pin,
+		Pin:         pin,
 		Options:     modOptions,
 	}
 	err = h.p.CreateServer(ctx, server)
@@ -198,7 +193,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		modNotice = "\nNOTE: This server includes the following mods:\n" + modInfo
 	}
 
-	sendMessage(session, interaction, fmt.Sprintf("created server **%s** in **%s**, with password: **%d**. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, *server.Pin)+autodeleteMessage+modNotice)
+	sendMessage(session, interaction, fmt.Sprintf("created server **%s** in **%s**, with password: **%s**. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, server.Pin)+autodeleteMessage+modNotice)
 
 	if h.maxServerCreateRate != 0 {
 		h.rateCounter.Incr(1)
@@ -332,8 +327,8 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 	}
 	for idx, server := range nsservers {
 		pin := unknown
-		if server.Pin != nil {
-			pin = strconv.Itoa(*server.Pin)
+		if server.Pin != "" {
+			pin = server.Pin
 		}
 		user := unknown
 		if server.RequestedBy != "" {
