@@ -280,9 +280,14 @@ func (h *handler) handleRestartServer(session *discordgo.Session, interaction *d
 		}
 	}
 
-	err := h.p.RestartServer(ctx, &nsserver.NSServer{
-		Name: serverName,
-	})
+	server, err := h.nsRepo.GetByName(ctx, serverName)
+	if err != nil {
+		sendMessage(session, interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+
+		return
+	}
+
+	err = h.p.RestartServer(ctx, server)
 	if err != nil {
 		sendMessage(session, interaction, fmt.Sprintf("failed to restart the target server. error: %v", err))
 
