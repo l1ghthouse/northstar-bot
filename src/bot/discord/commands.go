@@ -111,10 +111,8 @@ const PinLength = 4
 func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 
-	if h.maxServerCreateRate != 0 && !isAdministrator(interaction.Member.Permissions) {
-		if h.rateCounter.Rate() > int64(h.maxServerCreateRate) {
-			sendMessage(session, interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
-		}
+	if h.maxServerCreateRate != 0 && h.rateCounter.Rate() > int64(h.maxServerCreateRate) {
+		sendMessage(session, interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
 	}
 	servers, err := h.p.GetRunningServers(ctx)
 	if err != nil {
