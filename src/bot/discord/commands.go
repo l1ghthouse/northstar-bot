@@ -113,6 +113,8 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 
 	if h.maxServerCreateRate != 0 && h.rateCounter.Rate() > int64(h.maxServerCreateRate) {
 		sendMessage(session, interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
+
+		return
 	}
 	servers, err := h.p.GetRunningServers(ctx)
 	if err != nil {
@@ -161,6 +163,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	err = h.p.CreateServer(ctx, server)
 	if err != nil {
 		sendMessage(session, interaction, fmt.Sprintf("failed to create the target server. error: %v", err))
+
 		return
 	}
 
@@ -302,6 +305,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 	cachedServers, err := h.nsRepo.GetAll(ctx)
 	if err != nil {
 		sendMessage(session, interaction, fmt.Sprintf("failed to list running servers from database. error: %v", err))
+
 		return
 	}
 
