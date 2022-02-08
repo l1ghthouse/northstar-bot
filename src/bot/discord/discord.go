@@ -18,6 +18,7 @@ type Config struct {
 	DcBotToken       string `required:"true"`
 	DcGuildID        string `required:"true"`
 	BotReportChannel string ``
+	DedicatedRoleID  string ``
 }
 
 type discordBot struct {
@@ -36,7 +37,15 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 	if maxServersPerHour != 0 {
 		counter = ratecounter.NewRateCounter(time.Hour)
 	}
-	botHandler := handler{p: provider, maxConcurrentServers: maxConcurrentServers, autoDeleteDuration: autoDeleteDuration, nsRepo: nsRepo, maxServerCreateRate: maxServersPerHour, rateCounter: counter}
+	botHandler := handler{
+		p:                    provider,
+		maxConcurrentServers: maxConcurrentServers,
+		autoDeleteDuration:   autoDeleteDuration,
+		nsRepo:               nsRepo,
+		maxServerCreateRate:  maxServersPerHour,
+		rateCounter:          counter,
+		dedicatedRoleID:      d.config.DedicatedRoleID,
+	}
 
 	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){}
 	commandHandlers[CreateServer] = botHandler.handleCreateServer
@@ -47,6 +56,12 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 
 	discordClient.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+			err := botHandler.handleAuthUser(i.Interaction.Member)
+			if err != nil {
+				SendInteractionReply(s, i, fmt.Sprintf("Permission Error: %s", err))
+
+				return
+			}
 			h(s, i)
 		}
 	})
