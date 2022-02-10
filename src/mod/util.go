@@ -58,13 +58,11 @@ func latestThunderstoreMod(ctx context.Context, packageName string, requiredByCl
 		return "", "", "", "", false, fmt.Errorf("failed to get latest package version: %w", err)
 	}
 
-	link := "https://northstar.thunderstore.io/package/download/laundmo/ParseableLogs/0.0.1/"
-
 	builder := strings.Builder{}
-	builder.WriteString(cmdWgetZipBuilder(link, packageName))
+	builder.WriteString(cmdWgetZipBuilder(latestVersion.DownloadURL, packageName))
 	builder.WriteString(cmdUnzipBuilderWithDst(packageName))
 
 	modFullName := pkg.Owner + "." + packageName
 
-	return builder.String(), dockerArgBuilder(fmt.Sprintf("/%s/mods/%s", packageName, modFullName), modFullName), link, latestVersion.VersionNumber, requiredByClient, nil
+	return builder.String(), dockerArgBuilder(fmt.Sprintf("/%s/mods/%s", packageName, modFullName), modFullName), latestVersion.DownloadURL, latestVersion.VersionNumber, requiredByClient, nil
 }
