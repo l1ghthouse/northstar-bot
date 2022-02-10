@@ -29,3 +29,4 @@ linters:
     - goerr113
     - funlen
     - cyclop
+    - tagliatelle

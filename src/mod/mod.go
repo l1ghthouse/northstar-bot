@@ -6,12 +6,13 @@ import (
 )
 
 type Mod interface {
-	ModParams(ctx context.Context) (cmd string, dockerArgs string, downloadLink string, version string, err error)
+	ModParams(ctx context.Context) (cmd string, dockerArgs string, downloadLink string, version string, requiredByClient bool, err error)
 }
 
-var ModByName = map[string]func() Mod{
-	"rebalanced_lts_mod": func() Mod { return &RebalancedLTSMod{} },
+var ByName = map[string]func() Mod{
+	"rebalanced_lts_mod": func() Mod { return &RebalancedLTS{} },
 	"holo_shift_mod":     func() Mod { return &HoloShift{} },
+	"parseable_logs":     func() Mod { return &ParseableLogs{} },
 }
 
 var ErrNoTagsFound = fmt.Errorf("no tags found")

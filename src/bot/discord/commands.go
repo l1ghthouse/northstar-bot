@@ -29,7 +29,7 @@ const (
 )
 
 func modApplicationCommand() (options []*discordgo.ApplicationCommandOption) {
-	for k := range mod.ModByName {
+	for k := range mod.ByName {
 		options = append(options, &discordgo.ApplicationCommandOption{
 			Type:        discordgo.ApplicationCommandOptionBoolean,
 			Name:        k,
@@ -151,7 +151,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		return
 	}
 	var modOptions = make(map[string]interface{})
-	for modName := range mod.ModByName {
+	for modName := range mod.ByName {
 		modOptions[modName] = false
 		for _, option := range interaction.ApplicationCommandData().Options {
 			if option.Name == modName {
@@ -193,9 +193,18 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	modInfo := ""
 
 	for option := range server.Options {
-		for modName := range mod.ModByName {
+		for modName := range mod.ByName {
 			if option == modName && server.Options[option].(bool) {
-				modInfo += fmt.Sprintf("%s: version: **%s**. Download link: <%s>\n", modName, server.Options[modName+util.VersionPostfix], server.Options[modName+util.LinkPostfix])
+				builder := strings.Builder{}
+				builder.WriteString(fmt.Sprintf("\n%s:", modName))
+				builder.WriteString("\n")
+				builder.WriteString(fmt.Sprintf("Version: **%s**", server.Options[modName+util.VersionPostfix]))
+				builder.WriteString("\n")
+				builder.WriteString(fmt.Sprintf("Download link: <%s>", server.Options[modName+util.LinkPostfix]))
+				builder.WriteString("\n")
+				builder.WriteString(fmt.Sprintf("Required by client: %v", server.Options[modName+util.RequiredByClientPostfix]))
+				builder.WriteString("\n====================")
+				modInfo += builder.String()
 			}
 		}
 	}

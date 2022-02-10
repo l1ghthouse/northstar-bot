@@ -24,6 +24,7 @@ const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.4.0"
 const containerName = "northstar-dedicated"
 const VersionPostfix = "_version"
 const LinkPostfix = "_link"
+const RequiredByClientPostfix = "_clientRequired"
 
 func RestartServerScript() string {
 	return fmt.Sprintf("docker restart %s", containerName)
@@ -33,10 +34,10 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 	OptionalCmd := ""
 	DockerArgs := ""
 	for serverOptions, v := range server.Options {
-		for modName, generator := range mod.ModByName {
+		for modName, generator := range mod.ByName {
 			if serverOptions == modName && v.(bool) {
 				m := generator()
-				cmd, args, link, tag, err := m.ModParams(ctx)
+				cmd, args, link, tag, requiredByClient, err := m.ModParams(ctx)
 				if err != nil {
 					return "", fmt.Errorf("error generating mod: %w", err)
 				}
@@ -44,6 +45,7 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 				DockerArgs = DockerArgs + " " + args + " "
 				server.Options[serverOptions+VersionPostfix] = tag
 				server.Options[serverOptions+LinkPostfix] = link
+				server.Options[serverOptions+RequiredByClientPostfix] = requiredByClient
 			}
 		}
 	}
