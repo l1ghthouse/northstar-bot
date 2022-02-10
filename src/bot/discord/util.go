@@ -26,9 +26,30 @@ func sendComplexMessage(session *discordgo.Session, channelID string, msg string
 	}
 }
 
-func sendMessage(session *discordgo.Session, channelID string, msg string) {
-	if _, err := session.ChannelMessageSend(channelID, msg); err != nil {
-		log.Println(fmt.Sprintf("failed to send message to channel id: %s. error: %v", channelID, err))
+func sendMessage(session *discordgo.Session, interaction *discordgo.Interaction, msg string) {
+	if _, err := session.ChannelMessageSend(interaction.ChannelID, msg); err != nil {
+		log.Println(fmt.Sprintf("failed to send message to channel id: %s. error: %v", interaction.ChannelID, err))
+	}
+}
+
+func editDeferredInteractionReply(session *discordgo.Session, interaction *discordgo.Interaction, msg string) {
+	response := &discordgo.WebhookEdit{Content: msg}
+	_, err := session.InteractionResponseEdit(session.State.User.ID, interaction, response)
+	if err != nil {
+		log.Println(fmt.Sprintf("failed to update interaction. error: %v", err))
+	}
+}
+
+func sendInteractionDeferred(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			AllowedMentions: &discordgo.MessageAllowedMentions{
+				Users: []string{},
+			},
+		},
+	}); err != nil {
+		log.Println("Error sending message: ", err)
 	}
 }
 

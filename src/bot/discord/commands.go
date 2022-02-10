@@ -258,7 +258,7 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 		}
 	}
 
-	sendInteractionReply(session, interaction, fmt.Sprintf("Attempting to delete the server: %s", serverName))
+	sendInteractionDeferred(session, interaction)
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
@@ -282,7 +282,7 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 		Name: serverName,
 	})
 	if err != nil {
-		sendMessage(session, interaction.ChannelID, fmt.Sprintf("failed to delete the target server. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to delete the target server. error: %v", err))
 
 		return
 	}
@@ -292,7 +292,7 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 		log.Println(fmt.Sprintf("unable to delete server from the database: %v", err))
 	}
 
-	sendMessage(session, interaction.ChannelID, fmt.Sprintf("deleted server %s", serverName))
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("deleted server %s", serverName))
 }
 
 func (h *handler) handleRestartServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -409,13 +409,11 @@ func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *dis
 		return
 	}
 
-	sendInteractionReply(session, interaction, fmt.Sprintf("Extracting logs for %s. They will be sent to you privately once they are ready", serverName))
-
+	sendInteractionDeferred(session, interaction)
 	file, err := h.p.ExtractServerLogs(ctx, server)
 	if err != nil {
 		failure := fmt.Sprintf("failed to extract logs from target server. error: %v", err)
-		go sendMessageWithFilesDM(session, interaction.Member.User.ID, failure, nil)
-		sendMessage(session, interaction.ChannelID, failure)
+		editDeferredInteractionReply(session, interaction.Interaction, failure)
 		return
 	}
 
@@ -426,5 +424,5 @@ func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *dis
 	}}
 
 	go sendMessageWithFilesDM(session, interaction.Member.User.ID, fmt.Sprintf("logs extracted from server %s", serverName), files)
-	sendMessage(session, interaction.ChannelID, fmt.Sprintf("logs extraction for server %s is completed", serverName))
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("logs extraction for server %s is completed, and are sent privately to you", serverName))
 }
