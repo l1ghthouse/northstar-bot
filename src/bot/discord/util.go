@@ -26,9 +26,9 @@ func sendComplexMessage(session *discordgo.Session, channelID string, msg string
 	}
 }
 
-func sendMessage(session *discordgo.Session, interaction *discordgo.Interaction, msg string) {
-	if _, err := session.ChannelMessageSend(interaction.ChannelID, msg); err != nil {
-		log.Println(fmt.Sprintf("failed to send message to channel id: %s. error: %v", interaction.ChannelID, err))
+func sendMessage(session *discordgo.Session, channelID string, msg string) {
+	if _, err := session.ChannelMessageSend(channelID, msg); err != nil {
+		log.Println(fmt.Sprintf("failed to send message to channel id: %s. error: %v", channelID, err))
 	}
 }
 
