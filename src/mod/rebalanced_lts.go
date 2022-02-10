@@ -21,5 +21,5 @@ func (h RebalancedLTS) ModParams(ctx context.Context) (string, string, string, s
 	builder := strings.Builder{}
 	builder.WriteString(cmdWgetZipBuilder(link, LTSRebalancedModName))
 	builder.WriteString(cmdUnzipBuilderWithDst(LTSRebalancedModName))
-	return builder.String(), dockerArgBuilder(LTSRebalancedModName), link, latestTag, true, nil
+	return builder.String(), dockerArgBuilder(fmt.Sprintf("/%s", LTSRebalancedModName), LTSRebalancedModName), link, latestTag, true, nil
 }
