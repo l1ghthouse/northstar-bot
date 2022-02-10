@@ -1,21 +1,28 @@
 package discord
 
 import (
-	"log"
+	"io"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 type Notifyer struct {
 	discordClient *discordgo.Session
-	config        Config
+	reportChannel string
 }
 
 func (d *Notifyer) Notify(message string) {
-	if d.config.BotReportChannel != "" {
-		_, err := d.discordClient.ChannelMessageSend(d.config.BotReportChannel, message)
-		if err != nil {
-			log.Println("error sending message to the bot Report Channel: ", err)
-		}
+	sendMessage(d.discordClient, d.reportChannel, message)
+}
+
+func (d *Notifyer) NotifyAndAttach(message string, filename string, file io.Reader) {
+	if file != nil {
+		sendComplexMessage(d.discordClient, d.reportChannel, message, []*discordgo.File{{
+			Name:        filename,
+			ContentType: "application/octet-stream",
+			Reader:      file,
+		}})
+	} else {
+		d.Notify(message)
 	}
 }

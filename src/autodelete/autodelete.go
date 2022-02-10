@@ -3,6 +3,7 @@ package autodelete
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers"
 )
 
-type autoDeleteManager struct {
+type Manager struct {
 	notifyer    notifyer.Notifyer
 	provider    providers.Provider
 	maxLifetime time.Duration
@@ -19,9 +20,8 @@ type autoDeleteManager struct {
 }
 
 // NewAutoDeleteManager creates a new auto delete manager
-// nolint: golint,revive
-func NewAutoDeleteManager(repo nsserver.Repo, provider providers.Provider, notifyer notifyer.Notifyer, maxLifetime time.Duration) *autoDeleteManager {
-	return &autoDeleteManager{
+func NewAutoDeleteManager(repo nsserver.Repo, provider providers.Provider, notifyer notifyer.Notifyer, maxLifetime time.Duration) *Manager {
+	return &Manager{
 		notifyer:    notifyer,
 		provider:    provider,
 		maxLifetime: maxLifetime,
@@ -29,7 +29,7 @@ func NewAutoDeleteManager(repo nsserver.Repo, provider providers.Provider, notif
 	}
 }
 
-func (d *autoDeleteManager) AutoDelete() {
+func (d *Manager) AutoDelete() {
 	ticker := time.NewTicker(time.Minute * 2)
 	ctx := context.Background()
 	for range ticker.C {
@@ -49,9 +49,7 @@ func (d *autoDeleteManager) AutoDelete() {
 			if time.Since(server.CreatedAt) > d.maxLifetime {
 				for _, cached := range cachedServers {
 					if server.Name == cached.Name {
-						if err := d.repo.DeleteByName(ctx, server.Name); err != nil {
-							log.Println("error deleting cached server: ", err)
-						}
+						*server = *cached
 						break
 					}
 				}
@@ -61,10 +59,22 @@ func (d *autoDeleteManager) AutoDelete() {
 	}
 }
 
-func (d *autoDeleteManager) deleteAndNotify(ctx context.Context, server *nsserver.NSServer) {
-	err := d.provider.DeleteServer(ctx, server)
+func (d *Manager) deleteAndNotify(ctx context.Context, server *nsserver.NSServer) {
+	var logFile io.Reader
+	var err error
+	if d.notifyer != nil {
+		logFile, err = d.provider.ExtractServerLogs(ctx, server)
+		if err != nil {
+			log.Println("error extracting logs: ", err)
+		}
+	}
+
+	err = d.provider.DeleteServer(ctx, server)
 	if err != nil {
 		log.Println("error deleting server: ", err)
+		if d.notifyer != nil {
+			d.notifyer.Notify(fmt.Sprintf("error deleting server: %v", err))
+		}
 	}
 
 	err = d.repo.DeleteByName(ctx, server.Name)
@@ -72,5 +82,7 @@ func (d *autoDeleteManager) deleteAndNotify(ctx context.Context, server *nsserve
 		log.Println("error deleting server from database: ", err)
 	}
 
-	d.notifyer.Notify(fmt.Sprintf("Server '%s' has been deleted because it was up for over %s", server.Name, d.maxLifetime.String()))
+	if d.notifyer != nil {
+		d.notifyer.NotifyAndAttach(fmt.Sprintf("Server '%s' has been deleted because it was up for over %s", server.Name, d.maxLifetime.String()), fmt.Sprintf("%s.log.zip", server.Name), logFile)
+	}
 }

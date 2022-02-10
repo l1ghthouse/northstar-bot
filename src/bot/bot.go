@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/l1ghthouse/northstar-bootstrap/src/bot/notifyer"
+	"github.com/l1ghthouse/northstar-bootstrap/src/autodelete"
+
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 
 	"github.com/l1ghthouse/northstar-bootstrap/src/bot/discord"
@@ -12,7 +13,7 @@ import (
 )
 
 type Bot interface {
-	Start(provider providers.Provider, repo nsserver.Repo, maxConcurrentServers uint, MaxServersPerHour uint, autoDeleteDuration time.Duration) (notifyer.Notifyer, error)
+	Start(provider providers.Provider, repo nsserver.Repo, maxConcurrentServers uint, MaxServersPerHour uint, autoDeleteDuration time.Duration) (*autodelete.Manager, error)
 	Stop()
 }
 

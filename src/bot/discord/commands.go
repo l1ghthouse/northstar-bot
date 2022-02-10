@@ -104,6 +104,7 @@ type handler struct {
 	maxServerCreateRate  uint
 	rateCounter          *ratecounter.RateCounter
 	dedicatedRoleID      string
+	notifyer             *Notifyer
 }
 
 const unknown = "unknown"
@@ -122,30 +123,30 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	ctx := context.Background()
 
 	if h.maxServerCreateRate != 0 && h.rateCounter.Rate() > int64(h.maxServerCreateRate) {
-		SendInteractionReply(session, interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
+		sendInteractionReply(session, interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
 
 		return
 	}
 	servers, err := h.p.GetRunningServers(ctx)
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("Unable to list running servers: %v", err))
+		sendInteractionReply(session, interaction, fmt.Sprintf("unable to list running servers: %v", err))
 
 		return
 	}
 	if len(servers) >= int(h.maxConcurrentServers) {
-		SendInteractionReply(session, interaction, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers))
+		sendInteractionReply(session, interaction, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers))
 
 		return
 	}
 	cachedServers, err := h.nsRepo.GetAll(ctx)
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("Unable to list servers: %v", err))
+		sendInteractionReply(session, interaction, fmt.Sprintf("unable to list servers: %v", err))
 
 		return
 	}
 	name, err := generateUniqueName(servers, cachedServers)
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("Unable to generate unique server name: %v", err))
+		sendInteractionReply(session, interaction, fmt.Sprintf("unable to generate unique server name: %v", err))
 
 		return
 	}
@@ -172,14 +173,14 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	}
 	err = h.p.CreateServer(ctx, server)
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("failed to create the target server. error: %v", err))
+		sendInteractionReply(session, interaction, fmt.Sprintf("failed to create the target server. error: %v", err))
 
 		return
 	}
 
 	err = h.nsRepo.Store(ctx, []*nsserver.NSServer{server})
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("Unable to save server to the database: %v", err))
+		sendInteractionReply(session, interaction, fmt.Sprintf("unable to save server to the database: %v", err))
 
 		return
 	}
@@ -204,7 +205,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		modNotice = "\nNOTE: This server includes the following mods:\n" + modInfo
 	}
 
-	SendInteractionReply(session, interaction, fmt.Sprintf("created server **%s** in **%s**, with password: **%s**. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, server.Pin)+autodeleteMessage+modNotice)
+	sendInteractionReply(session, interaction, fmt.Sprintf("created server **%s** in **%s**, with password: **%s**. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, server.Pin)+autodeleteMessage+modNotice)
 
 	if h.maxServerCreateRate != 0 {
 		h.rateCounter.Incr(1)
@@ -251,17 +252,37 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 	if !isAdministrator(interaction.Member.Permissions) {
 		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
 		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-			SendInteractionReply(session, interaction, "Only Administrators and the person who requested the server can delete it")
+			sendInteractionReply(session, interaction, "Only Administrators and the person who requested the server can delete it")
 
 			return
 		}
 	}
 
-	err := h.p.DeleteServer(ctx, &nsserver.NSServer{
+	sendInteractionReply(session, interaction, fmt.Sprintf("Attempting to delete the server: %s", serverName))
+
+	server, err := h.nsRepo.GetByName(ctx, serverName)
+	if err != nil {
+		log.Println(fmt.Sprintf("unable to get server by name: %v", err))
+
+		server = &nsserver.NSServer{
+			Name: serverName,
+		}
+	}
+
+	if h.notifyer != nil {
+		logs, err := h.p.ExtractServerLogs(ctx, server)
+		if err != nil {
+			log.Println(fmt.Sprintf("unable to extract logs for server: %v", err))
+		} else {
+			go h.notifyer.NotifyAndAttach(fmt.Sprintf("Server %s is due for deletion. Logs:", server.Name), fmt.Sprintf("%s.log.zip", server.Name), logs)
+		}
+	}
+
+	err = h.p.DeleteServer(ctx, &nsserver.NSServer{
 		Name: serverName,
 	})
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("failed to delete the target server. error: %v", err))
+		sendMessage(session, interaction.ChannelID, fmt.Sprintf("failed to delete the target server. error: %v", err))
 
 		return
 	}
@@ -271,7 +292,7 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 		log.Println(fmt.Sprintf("unable to delete server from the database: %v", err))
 	}
 
-	SendInteractionReply(session, interaction, fmt.Sprintf("deleted server %s", serverName))
+	sendMessage(session, interaction.ChannelID, fmt.Sprintf("deleted server %s", serverName))
 }
 
 func (h *handler) handleRestartServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -280,7 +301,7 @@ func (h *handler) handleRestartServer(session *discordgo.Session, interaction *d
 	if !isAdministrator(interaction.Member.Permissions) {
 		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
 		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-			SendInteractionReply(session, interaction, "Only Administrators and the person who requested the server can restart it")
+			sendInteractionReply(session, interaction, "Only Administrators and the person who requested the server can restart it")
 
 			return
 		}
@@ -288,33 +309,33 @@ func (h *handler) handleRestartServer(session *discordgo.Session, interaction *d
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+		sendInteractionReply(session, interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
 
 		return
 	}
 
 	err = h.p.RestartServer(ctx, server)
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("failed to restart the target server. error: %v", err))
+		sendInteractionReply(session, interaction, fmt.Sprintf("failed to restart the target server. error: %v", err))
 
 		return
 	}
 
-	SendInteractionReply(session, interaction, fmt.Sprintf("restarted server %s", serverName))
+	sendInteractionReply(session, interaction, fmt.Sprintf("restarted server %s", serverName))
 }
 
 func (h *handler) handleListServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	nsservers, err := h.p.GetRunningServers(ctx)
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("failed to list running servers. error: %v", err))
+		sendInteractionReply(session, interaction, fmt.Sprintf("failed to list running servers. error: %v", err))
 
 		return
 	}
 
 	cachedServers, err := h.nsRepo.GetAll(ctx)
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("failed to list running servers from database. error: %v", err))
+		sendInteractionReply(session, interaction, fmt.Sprintf("failed to list running servers from database. error: %v", err))
 
 		return
 	}
@@ -333,7 +354,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 	servers := make([]string, len(nsservers))
 
 	if len(nsservers) == 0 {
-		SendInteractionReply(session, interaction, "No servers running")
+		sendInteractionReply(session, interaction, "No servers running")
 
 		return
 	}
@@ -374,7 +395,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		servers[idx] = builder.String()
 	}
 
-	SendInteractionReply(session, interaction, strings.Join(servers, "\n"))
+	sendInteractionReply(session, interaction, strings.Join(servers, "\n"))
 }
 
 func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -383,17 +404,18 @@ func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *dis
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
-		SendInteractionReply(session, interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+		sendInteractionReply(session, interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
 
 		return
 	}
 
-	SendInteractionReply(session, interaction, fmt.Sprintf("Extracting logs for %s. They will be sent to you privately once they are ready", serverName))
+	sendInteractionReply(session, interaction, fmt.Sprintf("Extracting logs for %s. They will be sent to you privately once they are ready", serverName))
 
 	file, err := h.p.ExtractServerLogs(ctx, server)
 	if err != nil {
-		sendMessageWithFilesDM(session, interaction, fmt.Sprintf("failed to extract logs from target server. error: %v", err), nil)
-
+		failure := fmt.Sprintf("failed to extract logs from target server. error: %v", err)
+		go sendMessageWithFilesDM(session, interaction.Member.User.ID, failure, nil)
+		sendMessage(session, interaction.ChannelID, failure)
 		return
 	}
 
@@ -403,49 +425,6 @@ func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *dis
 		Reader:      file,
 	}}
 
-	sendMessageWithFilesDM(session, interaction, fmt.Sprintf("logs extracted from server %s", serverName), files)
-}
-
-func sendMessageWithFilesDM(session *discordgo.Session, interaction *discordgo.InteractionCreate, msg string, file []*discordgo.File) {
-	directMessageChannel, err := session.UserChannelCreate(interaction.Member.User.ID)
-	if err != nil {
-		log.Println(fmt.Sprintf("failed to create DM channel for user %s. error: %v", interaction.Member.User.ID, err))
-
-		return
-	}
-	_, err = session.ChannelMessageSendComplex(directMessageChannel.ID, &discordgo.MessageSend{
-		Content: msg,
-		Files:   file,
-	})
-
-	if err != nil {
-		log.Println(fmt.Sprintf("failed to send message to user %s. error: %v", interaction.Member.User.ID, err))
-
-		return
-	}
-}
-
-func SendInteractionReply(s *discordgo.Session, i *discordgo.InteractionCreate, msg string) {
-	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: msg,
-			AllowedMentions: &discordgo.MessageAllowedMentions{
-				Users: []string{},
-			},
-		},
-	}); err != nil {
-		log.Println("Error sending message: ", err)
-	}
-}
-
-var ErrInvalidRole = errors.New("missing required role to use this command")
-
-func (h *handler) handleAuthUser(member *discordgo.Member) error {
-	if !isAdministrator(member.Permissions) {
-		if h.dedicatedRoleID != "" && !hasRole(member.Roles, h.dedicatedRoleID) {
-			return ErrInvalidRole
-		}
-	}
-	return nil
+	go sendMessageWithFilesDM(session, interaction.Member.User.ID, fmt.Sprintf("logs extracted from server %s", serverName), files)
+	sendMessage(session, interaction.ChannelID, fmt.Sprintf("logs extraction for server %s is completed", serverName))
 }

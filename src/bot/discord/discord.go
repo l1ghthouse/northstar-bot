@@ -7,8 +7,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/l1ghthouse/northstar-bootstrap/src/autodelete"
+
 	"github.com/bwmarrin/discordgo"
-	"github.com/l1ghthouse/northstar-bootstrap/src/bot/notifyer"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers"
 	"github.com/paulbellamy/ratecounter"
@@ -28,7 +29,7 @@ type discordBot struct {
 	closeChannels []chan struct{}
 }
 
-func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, maxConcurrentServers, maxServersPerHour uint, autoDeleteDuration time.Duration) (notifyer.Notifyer, error) {
+func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, maxConcurrentServers, maxServersPerHour uint, autoDeleteDuration time.Duration) (*autodelete.Manager, error) {
 	discordClient, err := discordgo.New("Bot " + d.config.DcBotToken)
 	if err != nil {
 		log.Fatal("Error creating Discord session: ", err)
@@ -37,6 +38,14 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 	if maxServersPerHour != 0 {
 		counter = ratecounter.NewRateCounter(time.Hour)
 	}
+	var n *Notifyer
+	if d.config.BotReportChannel != "" {
+		n = &Notifyer{
+			discordClient: discordClient,
+			reportChannel: d.config.BotReportChannel,
+		}
+	}
+
 	botHandler := handler{
 		p:                    provider,
 		maxConcurrentServers: maxConcurrentServers,
@@ -45,6 +54,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 		maxServerCreateRate:  maxServersPerHour,
 		rateCounter:          counter,
 		dedicatedRoleID:      d.config.DedicatedRoleID,
+		notifyer:             n,
 	}
 
 	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){}
@@ -54,15 +64,15 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 	commandHandlers[ExtractLogs] = botHandler.handleExtractLogs
 	commandHandlers[RestartServer] = botHandler.handleRestartServer
 
-	discordClient.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
-			err := botHandler.handleAuthUser(i.Interaction.Member)
+	discordClient.AddHandler(func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+		if handlerFunc, ok := commandHandlers[interaction.ApplicationCommandData().Name]; ok {
+			err := botHandler.handleAuthUser(interaction.Interaction.Member)
 			if err != nil {
-				SendInteractionReply(s, i, fmt.Sprintf("Permission Error: %s", err))
+				sendInteractionReply(session, interaction, fmt.Sprintf("Permission Error: %s", err))
 
 				return
 			}
-			h(s, i)
+			handlerFunc(session, interaction)
 		}
 	})
 
@@ -97,10 +107,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 		}
 	}
 
-	return &Notifyer{
-		discordClient: discordClient,
-		config:        d.config,
-	}, nil
+	return autodelete.NewAutoDeleteManager(nsRepo, provider, n, autoDeleteDuration), nil
 }
 
 func (d *discordBot) gracefulDiscordClose(discordClient io.Closer, callbackDone chan struct{}) {

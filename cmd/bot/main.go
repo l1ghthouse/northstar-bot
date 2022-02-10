@@ -8,7 +8,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/l1ghthouse/northstar-bootstrap/src/autodelete"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"github.com/l1ghthouse/northstar-bootstrap/src/storage"
 	"github.com/l1ghthouse/northstar-bootstrap/src/storage/orm"
@@ -56,7 +55,7 @@ func main() {
 		autoDeleteDuration = time.Duration(cfg.MaxLifetimeSeconds) * time.Second
 	}
 
-	if autoDeleteDuration != time.Duration(0) && autoDeleteDuration <= time.Minute*20 {
+	if autoDeleteDuration != time.Duration(0) && autoDeleteDuration <= time.Minute*10 {
 		log.Fatal("ContainerMaxLifetimeSeconds must be greater than 10 minutes, or 0 to disable auto-delete")
 	}
 
@@ -68,14 +67,13 @@ func main() {
 		maxServerRate = uint(cfg.MaxServersPerHour)
 	}
 
-	notifyer, err := newBot.Start(provider, nsRepo, cfg.MaxConcurrentInstances, maxServerRate, autoDeleteDuration)
+	autoDeleteManager, err := newBot.Start(provider, nsRepo, cfg.MaxConcurrentInstances, maxServerRate, autoDeleteDuration)
 	if err != nil {
 		log.Fatal("Error starting the bot: ", err)
 	}
 
 	if autoDeleteDuration != time.Duration(0) {
-		autodeleteManager := autodelete.NewAutoDeleteManager(nsRepo, provider, notifyer, autoDeleteDuration)
-		go autodeleteManager.AutoDelete()
+		go autoDeleteManager.AutoDelete()
 	}
 
 	// Wait here until CTRL-C or other term signal is received.

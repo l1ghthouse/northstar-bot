@@ -157,6 +157,12 @@ func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, 
 	if err != nil {
 		return nil, err
 	}
+	defer func(sshClient *ssh.Client) {
+		err := sshClient.Close()
+		if err != nil {
+			log.Printf("failed to close ssh client: %v", err)
+		}
+	}(sshClient)
 
 	sshSession, err := sshClient.NewSession()
 	if err != nil {
@@ -165,9 +171,6 @@ func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, 
 	output, err := sshSession.CombinedOutput(util.FormatLogExtractionScript())
 	if err != nil {
 		return nil, fmt.Errorf("unable to extract logs: %w, output: %s", err, string(output))
-	}
-	if err := sshSession.Close(); err != nil {
-		log.Printf("unable to close ssh session: %v", err)
 	}
 
 	buffer := bytes.NewBuffer(nil)
