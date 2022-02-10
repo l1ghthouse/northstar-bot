@@ -307,6 +307,13 @@ func (v *vultrClient) restartNorthstarInstance(ctx context.Context, serverName s
 		return err
 	}
 
+	defer func(sshClient *ssh.Client) {
+		err := sshClient.Close()
+		if err != nil {
+			log.Printf("failed to close ssh client: %s", err)
+		}
+	}(sshClient)
+
 	sshSession, err := sshClient.NewSession()
 	if err != nil {
 		return fmt.Errorf("unable to create ssh session: %w", err)
@@ -314,9 +321,6 @@ func (v *vultrClient) restartNorthstarInstance(ctx context.Context, serverName s
 	err = sshSession.Run(util.RestartServerScript())
 	if err != nil {
 		return fmt.Errorf("unable to restart the server: %w", err)
-	}
-	if err := sshSession.Close(); err != nil {
-		log.Printf("unable to close ssh session: %v", err)
 	}
 
 	return nil
