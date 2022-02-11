@@ -20,6 +20,7 @@ type NSServer struct {
 	MainIP          string            `json:"mainIP" gorm:""`
 	GameUDPPort     int               `json:"gameUDPPort" gorm:"not null;default:0"`
 	AuthTCPPort     int               `json:"authTCPPort" gorm:"not null;default:0"`
+	MasterServer    string            `json:"masterServer" gorm:"not null;default:null"`
 	Options         datatypes.JSONMap `json:"options" gorm:""`
 	CreatedAt       time.Time
 }

@@ -61,6 +61,12 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 export IMAGE=%s
 export NS_AUTH_PORT="%d"
 export NS_PORT="%d"
+export NS_MASTERSERVER_URL="%s"
+export NS_SERVER_PASSWORD="%s"
+export NS_INSECURE="%d"
+export NS_SERVER_NAME="[%s]%s"
+export NS_SERVER_DESC="%s"
+
 docker pull $IMAGE
 
 apt update -y
@@ -87,8 +93,8 @@ curl -L "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp" -s 
 
 %s
 
-docker run -d --pull always --publish $NS_AUTH_PORT:$NS_AUTH_PORT/tcp --publish $NS_PORT:$NS_PORT/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME="[%s]%s" --env NS_SERVER_DESC="%s" --env NS_AUTH_PORT --env NS_PORT --env NS_SERVER_PASSWORD="%s" --env NS_INSECURE="%d" --name "%s" $IMAGE
-`, dockerImage, server.AuthTCPPort, server.GameUDPPort, OptionalCmd, DockerArgs, server.Region, server.Name, serverDesc, server.Pin, Btoi(insecure), containerName), nil
+docker run -d --pull always --publish $NS_AUTH_PORT:$NS_AUTH_PORT/tcp --publish $NS_PORT:$NS_PORT/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME --env NS_MASTERSERVER_URL --env NS_SERVER_DESC --env NS_AUTH_PORT --env NS_PORT --env NS_SERVER_PASSWORD --env NS_INSECURE --name "%s" $IMAGE
+`, dockerImage, server.AuthTCPPort, server.GameUDPPort, server.MasterServer, server.Pin, Btoi(insecure), server.Region, server.Name, serverDesc, OptionalCmd, DockerArgs, containerName), nil
 }
 
 var RemoteFile = "/extract.zip"

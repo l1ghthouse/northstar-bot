@@ -135,6 +135,8 @@ func optionValue(options []*discordgo.ApplicationCommandInteractionDataOption, n
 	return nil, false
 }
 
+const DefaultServerServer = "https://northstar.tf"
+
 func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 
@@ -186,14 +188,15 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	pin := password.MustGenerate(PinLength, PinLength, 0, false, true)
 
 	server := &nsserver.NSServer{
-		Region:      interaction.ApplicationCommandData().Options[0].StringValue(),
-		RequestedBy: interaction.Member.User.ID,
-		Name:        name,
-		Pin:         pin,
-		Options:     modOptions,
-		Insecure:    isInsecure,
-		GameUDPPort: 37015,
-		AuthTCPPort: 8081,
+		Region:       interaction.ApplicationCommandData().Options[0].StringValue(),
+		RequestedBy:  interaction.Member.User.ID,
+		Name:         name,
+		Pin:          pin,
+		Options:      modOptions,
+		Insecure:     isInsecure,
+		GameUDPPort:  37015,
+		AuthTCPPort:  8081,
+		MasterServer: DefaultServerServer,
 	}
 
 	sendInteractionDeferred(session, interaction)
@@ -438,6 +441,10 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("Requested by: <@%s>", user))
 		builder.WriteString("\n")
+		if server.MasterServer != DefaultServerServer {
+			builder.WriteString(fmt.Sprintf("Master server: %s", server.MasterServer))
+			builder.WriteString("\n")
+		}
 
 		if server.Insecure {
 			builder.WriteString("Insecure: true")
