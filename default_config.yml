@@ -5,7 +5,7 @@ bot:
     botreportchannel: "YOUR_DISCORD_CHANNEL_ID_FOR_BOT_REPORTING"
 
 maxconcurrentinstances: 1
-maxlifetimeseconds: 3300
+maxlifetimeseconds: 3300 # 55 minutes, to not be overcharged by vultr
 
 provider:
   vultr:
