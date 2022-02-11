@@ -30,7 +30,14 @@ func RestartServerScript() string {
 	return fmt.Sprintf("docker restart %s", containerName)
 }
 
-func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverDesc string, insecure string) (string, error) {
+func Btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverDesc string, insecure bool) (string, error) {
 	OptionalCmd := ""
 	DockerArgs := ""
 	for serverOptions, v := range server.Options {
@@ -51,7 +58,9 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 	}
 
 	return fmt.Sprintf(`#!/bin/bash
-IMAGE=%s
+export IMAGE=%s
+export NS_AUTH_PORT="%d"
+export NS_PORT="%d"
 docker pull $IMAGE
 
 apt update -y
@@ -78,8 +87,8 @@ curl -L "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp" -s 
 
 %s
 
-docker run -d --pull always --publish 8081:8081/tcp --publish 37015:37015/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME="[%s]%s" --env NS_SERVER_DESC="%s" --env NS_SERVER_PASSWORD="%s" --env NS_INSECURE="%s" --name "%s" $IMAGE
-`, dockerImage, OptionalCmd, DockerArgs, server.Region, server.Name, serverDesc, server.Pin, insecure, containerName), nil
+docker run -d --pull always --publish $NS_AUTH_PORT:$NS_AUTH_PORT/tcp --publish $NS_PORT:$NS_PORT/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME="[%s]%s" --env NS_SERVER_DESC="%s" --env NS_AUTH_PORT --env NS_PORT --env NS_SERVER_PASSWORD="%s" --env NS_INSECURE="%d" --name "%s" $IMAGE
+`, dockerImage, server.AuthTCPPort, server.GameUDPPort, OptionalCmd, DockerArgs, server.Region, server.Name, serverDesc, server.Pin, Btoi(insecure), containerName), nil
 }
 
 var RemoteFile = "/extract.zip"

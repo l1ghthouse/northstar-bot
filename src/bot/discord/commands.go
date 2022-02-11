@@ -39,6 +39,8 @@ func modApplicationCommand() (options []*discordgo.ApplicationCommandOption) {
 	return
 }
 
+const CreateServerOptInsecure = "insecure"
+
 var (
 	commands = []*discordgo.ApplicationCommand{
 		{
@@ -50,6 +52,11 @@ var (
 					Name:        "region",
 					Description: "region in which the server will be created",
 					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        CreateServerOptInsecure,
+					Description: "Whether the server should be created with insecure mode(exposes IP address)",
 				},
 			}, modApplicationCommand()...),
 		},
@@ -119,6 +126,15 @@ func hasRole(roles []string, role string) bool {
 	return false
 }
 
+func optionValue(options []*discordgo.ApplicationCommandInteractionDataOption, name string) (*discordgo.ApplicationCommandInteractionDataOption, bool) {
+	for _, option := range options {
+		if option.Name == name {
+			return option, true
+		}
+	}
+	return nil, false
+}
+
 func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 
@@ -153,13 +169,18 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	var modOptions = make(map[string]interface{})
 	for modName := range mod.ByName {
 		modOptions[modName] = false
-		for _, option := range interaction.ApplicationCommandData().Options {
-			if option.Name == modName {
-				modOptions[modName] = true
-				modOptions[modName] = option.BoolValue()
-				break
-			}
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, modName)
+		if ok {
+			modOptions[modName] = val.BoolValue()
 		}
+	}
+
+	var isInsecure bool
+	val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerOptInsecure)
+	if ok {
+		isInsecure = val.BoolValue()
+	} else {
+		isInsecure = false
 	}
 
 	pin := password.MustGenerate(PinLength, PinLength, 0, false, true)
@@ -170,24 +191,48 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		Name:        name,
 		Pin:         pin,
 		Options:     modOptions,
+		Insecure:    isInsecure,
+		GameUDPPort: 37015,
+		AuthTCPPort: 8081,
 	}
+
+	sendInteractionDeferred(session, interaction)
+
 	err = h.p.CreateServer(ctx, server)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("failed to create the target server. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to create the target server. error: %v", err))
 
 		return
+	}
+
+	if h.maxServerCreateRate != 0 {
+		h.rateCounter.Incr(1)
 	}
 
 	err = h.nsRepo.Store(ctx, []*nsserver.NSServer{server})
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("unable to save server to the database: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to save server to the database: %v", err))
 
 		return
 	}
 
-	autodeleteMessage := ""
+	note := strings.Builder{}
+	note.WriteString(fmt.Sprintf("Created server **%s** in **%s**, with password: **%s**.", server.Name, server.Region, server.Pin))
+	note.WriteString("\n")
+
+	if server.Insecure {
+		note.WriteString("\n")
+		note.WriteString(fmt.Sprintf("Insecure mode is enabled. If master server is offline, use: `connect %s:%d`", server.MainIP, server.GameUDPPort))
+		note.WriteString("\n")
+	}
+
+	note.WriteString("It will take the server around 5 minutes to come online")
+	note.WriteString("\n")
+
 	if h.autoDeleteDuration != time.Duration(0) {
-		autodeleteMessage = fmt.Sprintf("\nThis server will be deleted in %s", h.autoDeleteDuration.String())
+		note.WriteString("\n")
+		note.WriteString(fmt.Sprintf("This server will be deleted in %s", h.autoDeleteDuration.String()))
+		note.WriteString("\n")
 	}
 
 	modInfo := ""
@@ -196,29 +241,28 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		for modName := range mod.ByName {
 			if option == modName && server.Options[option].(bool) {
 				builder := strings.Builder{}
-				builder.WriteString(fmt.Sprintf("\n%s:", modName))
+				builder.WriteString("\n")
+				builder.WriteString(fmt.Sprintf("%s:", modName))
 				builder.WriteString("\n")
 				builder.WriteString(fmt.Sprintf("Version: **%s**", server.Options[modName+util.VersionPostfix]))
 				builder.WriteString("\n")
 				builder.WriteString(fmt.Sprintf("Download link: <%s>", server.Options[modName+util.LinkPostfix]))
 				builder.WriteString("\n")
 				builder.WriteString(fmt.Sprintf("Required by client: %v", server.Options[modName+util.RequiredByClientPostfix]))
-				builder.WriteString("\n====================")
+				builder.WriteString("\n")
+				builder.WriteString("====================")
 				modInfo += builder.String()
 			}
 		}
 	}
 
-	modNotice := ""
 	if modInfo != "" {
-		modNotice = "\nNOTE: This server includes the following mods:\n" + modInfo
+		note.WriteString("\n")
+		note.WriteString("The server includes the following mods:")
+		note.WriteString(modInfo)
 	}
 
-	sendInteractionReply(session, interaction, fmt.Sprintf("created server **%s** in **%s**, with password: **%s**. \nIt will take the server around 5 minutes to come online", server.Name, server.Region, server.Pin)+autodeleteMessage+modNotice)
-
-	if h.maxServerCreateRate != 0 {
-		h.rateCounter.Incr(1)
-	}
+	editDeferredInteractionReply(session, interaction.Interaction, note.String())
 }
 
 var ErrUnableToGenerateUniqueName = errors.New("unable to generate unique name")
@@ -394,6 +438,14 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("Requested by: <@%s>", user))
 		builder.WriteString("\n")
+
+		if server.Insecure {
+			builder.WriteString("Insecure: true")
+			builder.WriteString("\n")
+			builder.WriteString(fmt.Sprintf("IP: %s, Port: %d", server.MainIP, server.GameUDPPort))
+			builder.WriteString("\n")
+		}
+
 		if options != "" {
 			builder.WriteString(fmt.Sprintf("Options: \n```\n%s```\n", options))
 		}

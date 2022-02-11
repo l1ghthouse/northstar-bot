@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"strings"
 	"time"
 
@@ -239,10 +241,12 @@ func (v *vultrClient) getVultrInstanceByName(ctx context.Context, serverName str
 	return nil, fmt.Errorf("no instance found for %s", serverName)
 }
 
+var errTimedOutToReceivePublicIP = errors.New("timed out to receive public IP")
+
 func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsserver.NSServer, regionID string, tag string) error {
 	// Create a base64 encoded script that will: Download northstar container, and Titanfall2 files from git, to startup the server
 
-	s, err := util.FormatStartupScript(ctx, server, "Competitive LTS!! Yay!", "1")
+	s, err := util.FormatStartupScript(ctx, server, "Competitive LTS!! Yay!", server.Insecure)
 	if err != nil {
 		return fmt.Errorf("failed to generate formatted script: %w", err)
 	}
@@ -280,7 +284,31 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 	if err != nil {
 		return fmt.Errorf("failed to parse date: %w", err)
 	}
+
 	server.DefaultPassword = instance.DefaultPassword
+
+	if server.Insecure {
+		ticker := time.NewTicker(7 * time.Second)
+		maxWait := time.After(time.Minute * 5)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-maxWait:
+				return errTimedOutToReceivePublicIP
+			case <-ticker.C:
+				instance, err = v.getVultrInstanceByName(ctx, server.Name, tag)
+				if err != nil {
+					return err
+				}
+				ip := net.ParseIP(instance.MainIP)
+				if ip.IsUnspecified() {
+					continue
+				}
+				server.MainIP = ip.String()
+				return nil
+			}
+		}
+	}
 	return nil
 }
 
