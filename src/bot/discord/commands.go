@@ -175,28 +175,34 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		return
 	}
 	var modOptions = make(map[string]interface{})
-	for modName := range mod.ByName {
-		modOptions[modName] = false
-		val, ok := optionValue(interaction.ApplicationCommandData().Options, modName)
-		if ok {
-			modOptions[modName] = val.BoolValue()
+	{
+		for modName := range mod.ByName {
+			modOptions[modName] = false
+			val, ok := optionValue(interaction.ApplicationCommandData().Options, modName)
+			if ok {
+				modOptions[modName] = val.BoolValue()
+			}
 		}
 	}
 
 	var isInsecure bool
-	val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerOptInsecure)
-	if ok {
-		isInsecure = val.BoolValue()
-	} else {
-		isInsecure = false
+	{
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerOptInsecure)
+		if ok {
+			isInsecure = val.BoolValue()
+		} else {
+			isInsecure = false
+		}
 	}
 
 	var masterServer string
-	val, ok = optionValue(interaction.ApplicationCommandData().Options, CreateServerOptMasterServer)
-	if ok {
-		masterServer = val.StringValue()
-	} else {
-		masterServer = DefaultServerServer
+	{
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerOptMasterServer)
+		if ok {
+			masterServer = val.StringValue()
+		} else {
+			masterServer = DefaultServerServer
+		}
 	}
 
 	pin := password.MustGenerate(PinLength, PinLength, 0, false, true)
