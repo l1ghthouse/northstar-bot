@@ -40,6 +40,7 @@ func modApplicationCommand() (options []*discordgo.ApplicationCommandOption) {
 }
 
 const CreateServerOptInsecure = "insecure"
+const CreateServerOptMasterServer = "master_server"
 
 var (
 	commands = []*discordgo.ApplicationCommand{
@@ -57,6 +58,11 @@ var (
 					Type:        discordgo.ApplicationCommandOptionBoolean,
 					Name:        CreateServerOptInsecure,
 					Description: "Whether the server should be created with insecure mode(exposes IP address)",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        CreateServerOptMasterServer,
+					Description: "Custom Master Server",
 				},
 			}, modApplicationCommand()...),
 		},
@@ -185,6 +191,14 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		isInsecure = false
 	}
 
+	var masterServer string
+	val, ok = optionValue(interaction.ApplicationCommandData().Options, CreateServerOptMasterServer)
+	if ok {
+		masterServer = val.StringValue()
+	} else {
+		masterServer = DefaultServerServer
+	}
+
 	pin := password.MustGenerate(PinLength, PinLength, 0, false, true)
 
 	server := &nsserver.NSServer{
@@ -196,7 +210,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		Insecure:     isInsecure,
 		GameUDPPort:  37015,
 		AuthTCPPort:  8081,
-		MasterServer: DefaultServerServer,
+		MasterServer: masterServer,
 	}
 
 	sendInteractionDeferred(session, interaction)
