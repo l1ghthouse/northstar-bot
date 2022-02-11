@@ -3,8 +3,9 @@ package mod
 import (
 	"context"
 	"fmt"
-	"github.com/l1ghthouse/northstar-bootstrap/src/mod/thunderstore"
 	"strings"
+
+	"github.com/l1ghthouse/northstar-bootstrap/src/mod/thunderstore"
 
 	"github.com/google/go-github/v42/github"
 )
@@ -44,8 +45,8 @@ func cmdUnzipBuilderWithDst(zipName string) string {
 	return builder.String()
 }
 
-func dockerArgBuilder(ModPath string, modName string) string {
-	return fmt.Sprintf("--mount \"type=bind,source=%s,target=/mnt/mods/%s,readonly\"", ModPath, modName)
+func dockerArgBuilder(modPath string, modName string) string {
+	return fmt.Sprintf("--mount \"type=bind,source=%s,target=/mnt/mods/%s,readonly\"", modPath, modName)
 }
 
 func latestThunderstoreMod(ctx context.Context, packageName string, requiredByClient bool) (string, string, string, string, bool, error) {
