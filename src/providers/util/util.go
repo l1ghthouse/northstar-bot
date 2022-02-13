@@ -20,7 +20,7 @@ func CreateFunnyName() string {
 	return codename.Generate(rng, 0)
 }
 
-const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.4.0"
+const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.5.0"
 const containerName = "northstar-dedicated"
 const VersionPostfix = "_version"
 const LinkPostfix = "_link"
