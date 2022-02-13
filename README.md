@@ -15,4 +15,5 @@ Scope:
     
     
 Invite example:
+
 https://discord.com/api/oauth2/authorize?client_id=<CLIENT_BOT_ID>&permissions=3072&scope=bot%20applications.commands
