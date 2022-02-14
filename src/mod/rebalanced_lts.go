@@ -11,6 +11,7 @@ type RebalancedLTS struct{}
 const LTSRebalancedRepoOwner = "Dinorush"
 const LTSRebalancedRepoName = "LTSRebalance"
 const LTSRebalancedModName = LTSRebalancedRepoOwner + "." + LTSRebalancedRepoName
+const LTSRebalancedModNameKVFix = LTSRebalancedModName + "_KVFix"
 
 func (h RebalancedLTS) ModParams(ctx context.Context) (string, string, string, string, bool, error) {
 	latestTag, err := latestGithubTag(ctx, LTSRebalancedRepoOwner, LTSRebalancedRepoName)
@@ -21,5 +22,7 @@ func (h RebalancedLTS) ModParams(ctx context.Context) (string, string, string, s
 	builder := strings.Builder{}
 	builder.WriteString(cmdWgetZipBuilder(link, LTSRebalancedModName))
 	builder.WriteString(cmdUnzipBuilderWithDst(LTSRebalancedModName))
-	return builder.String(), dockerArgBuilder(fmt.Sprintf("/%s", LTSRebalancedModName), LTSRebalancedModName), link, latestTag, true, nil
+	dockerArgs := dockerArgBuilder(fmt.Sprintf("/%s/%s", LTSRebalancedModName, LTSRebalancedModName), LTSRebalancedModName) + " " +
+		dockerArgBuilder(fmt.Sprintf("/%s/%s", LTSRebalancedModName, LTSRebalancedModNameKVFix), LTSRebalancedModNameKVFix)
+	return builder.String(), dockerArgs, link, latestTag, true, nil
 }
