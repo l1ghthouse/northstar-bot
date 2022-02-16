@@ -20,7 +20,47 @@ func CreateFunnyName() string {
 	return codename.Generate(rng, 0)
 }
 
-const dockerImage = "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.5.0"
+type DockerVersion struct {
+	IsLatest    bool
+	DockerImage string
+}
+
+func LatestStableDockerNorthstar() (string, string) {
+	for k, v := range NorthstarVersions {
+		if v.IsLatest {
+			return k, v.DockerImage
+		}
+	}
+	return "", ""
+}
+
+var NorthstarVersions = map[string]DockerVersion{
+	"1.5.0": {
+		IsLatest:    true,
+		DockerImage: "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.5.0",
+	},
+	"1.4.0": {
+		IsLatest:    false,
+		DockerImage: "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.4.0",
+	},
+}
+
+// checks that one, and only one latest version is set to true
+func init() {
+	hasLatest := false
+	for _, v := range NorthstarVersions {
+		if v.IsLatest {
+			if hasLatest {
+				log.Fatalf("Multiple latest versions found")
+			}
+			hasLatest = true
+		}
+	}
+	if !hasLatest {
+		log.Fatalf("No latest version found")
+	}
+}
+
 const containerName = "northstar-dedicated"
 const VersionPostfix = "_version"
 const LinkPostfix = "_link"
@@ -94,7 +134,7 @@ curl -L "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp" -s 
 %s
 
 docker run -d --pull always --publish $NS_AUTH_PORT:$NS_AUTH_PORT/tcp --publish $NS_PORT:$NS_PORT/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME --env NS_MASTERSERVER_URL --env NS_SERVER_DESC --env NS_AUTH_PORT --env NS_PORT --env NS_SERVER_PASSWORD --env NS_INSECURE --name "%s" $IMAGE
-`, dockerImage, server.AuthTCPPort, server.GameUDPPort, server.MasterServer, server.Pin, Btoi(insecure), server.Region, server.Name, serverDesc, OptionalCmd, DockerArgs, containerName), nil
+`, server.DockerImageVersion, server.AuthTCPPort, server.GameUDPPort, server.MasterServer, server.Pin, Btoi(insecure), server.Region, server.Name, serverDesc, OptionalCmd, DockerArgs, containerName), nil
 }
 
 var RemoteFile = "/extract.zip"

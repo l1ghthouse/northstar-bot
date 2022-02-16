@@ -39,8 +39,19 @@ func modApplicationCommand() (options []*discordgo.ApplicationCommandOption) {
 	return
 }
 
+func serverCreateVersionChoices() (options []*discordgo.ApplicationCommandOptionChoice) {
+	for k, v := range util.NorthstarVersions {
+		options = append(options, &discordgo.ApplicationCommandOptionChoice{
+			Value: v.DockerImage,
+			Name:  k,
+		})
+	}
+	return
+}
+
 const CreateServerOptInsecure = "insecure"
 const CreateServerOptMasterServer = "master_server"
+const ServerVersion = "server_version"
 
 var (
 	commands = []*discordgo.ApplicationCommand{
@@ -63,6 +74,12 @@ var (
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        CreateServerOptMasterServer,
 					Description: "Custom Master Server",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        ServerVersion,
+					Description: "Version of the server to create. If not specified, the latest version will be used",
+					Choices:     serverCreateVersionChoices(),
 				},
 			}, modApplicationCommand()...),
 		},
@@ -141,39 +158,8 @@ func optionValue(options []*discordgo.ApplicationCommandInteractionDataOption, n
 	return nil, false
 }
 
-const DefaultServerServer = "https://northstar.tf"
+func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsserver.NSServer {
 
-func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
-	ctx := context.Background()
-
-	if h.maxServerCreateRate != 0 && h.rateCounter.Rate() > int64(h.maxServerCreateRate) {
-		sendInteractionReply(session, interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
-
-		return
-	}
-	servers, err := h.p.GetRunningServers(ctx)
-	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("unable to list running servers: %v", err))
-
-		return
-	}
-	if len(servers) >= int(h.maxConcurrentServers) {
-		sendInteractionReply(session, interaction, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers))
-
-		return
-	}
-	cachedServers, err := h.nsRepo.GetAll(ctx)
-	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("unable to list servers: %v", err))
-
-		return
-	}
-	name, err := generateUniqueName(servers, cachedServers)
-	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("unable to generate unique server name: %v", err))
-
-		return
-	}
 	var modOptions = make(map[string]interface{})
 	{
 		for modName := range mod.ByName {
@@ -205,19 +191,71 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		}
 	}
 
+	var serverVersion string
+	var dockerImageVersion string
+	{
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, ServerVersion)
+		if ok {
+			dockerImageVersion = val.StringValue()
+			serverVersion = val.Name
+		} else {
+			serverVersion, dockerImageVersion = util.LatestStableDockerNorthstar()
+		}
+	}
+
 	pin := password.MustGenerate(PinLength, PinLength, 0, false, true)
 
-	server := &nsserver.NSServer{
-		Region:       interaction.ApplicationCommandData().Options[0].StringValue(),
-		RequestedBy:  interaction.Member.User.ID,
-		Name:         name,
-		Pin:          pin,
-		Options:      modOptions,
-		Insecure:     isInsecure,
-		GameUDPPort:  37015,
-		AuthTCPPort:  8081,
-		MasterServer: masterServer,
+	return &nsserver.NSServer{
+		Region:             interaction.ApplicationCommandData().Options[0].StringValue(),
+		RequestedBy:        interaction.Member.User.ID,
+		Name:               name,
+		Pin:                pin,
+		Options:            modOptions,
+		Insecure:           isInsecure,
+		ServerVersion:      serverVersion,
+		GameUDPPort:        37015,
+		AuthTCPPort:        8081,
+		DockerImageVersion: dockerImageVersion,
+		MasterServer:       masterServer,
 	}
+}
+
+const DefaultServerServer = "https://northstar.tf"
+
+func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+	ctx := context.Background()
+
+	if h.maxServerCreateRate != 0 && h.rateCounter.Rate() > int64(h.maxServerCreateRate) {
+		sendInteractionReply(session, interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
+
+		return
+	}
+	servers, err := h.p.GetRunningServers(ctx)
+	if err != nil {
+		sendInteractionReply(session, interaction, fmt.Sprintf("unable to list running servers: %v", err))
+
+		return
+	}
+	if len(servers) >= int(h.maxConcurrentServers) {
+		sendInteractionReply(session, interaction, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers))
+
+		return
+	}
+	cachedServers, err := h.nsRepo.GetAll(ctx)
+	if err != nil {
+		sendInteractionReply(session, interaction, fmt.Sprintf("unable to list servers: %v", err))
+
+		return
+	}
+
+	name, err := generateUniqueName(servers, cachedServers)
+	if err != nil {
+		sendInteractionReply(session, interaction, fmt.Sprintf("unable to generate unique server name: %v", err))
+
+		return
+	}
+
+	server := defaultServer(name, interaction)
 
 	sendInteractionDeferred(session, interaction)
 
@@ -248,7 +286,9 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		note.WriteString(fmt.Sprintf("Insecure mode is enabled. If master server is offline, use: `connect %s:%d`", server.MainIP, server.GameUDPPort))
 		note.WriteString("\n")
 	}
-
+	note.WriteString("\n")
+	note.WriteString(fmt.Sprintf("Server version: %s", server.ServerVersion))
+	note.WriteString("\n")
 	note.WriteString("It will take the server around 5 minutes to come online")
 	note.WriteString("\n")
 
@@ -459,6 +499,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("Pin: `%s`", pin))
 		builder.WriteString("\n")
+		builder.WriteString(fmt.Sprintf("Server Version: %s", server.ServerVersion))
 		builder.WriteString(fmt.Sprintf("Requested by: <@%s>", user))
 		builder.WriteString("\n")
 		if server.MasterServer != DefaultServerServer {
