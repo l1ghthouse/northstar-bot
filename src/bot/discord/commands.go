@@ -302,6 +302,13 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		note.WriteString(fmt.Sprintf("Insecure mode is enabled. If master server is offline, use: `connect %s:%d`", server.MainIP, server.GameUDPPort))
 		note.WriteString("\n")
 	}
+
+	if server.OptimizedServerFiles {
+		note.WriteString("\n")
+		note.WriteString("Optimized server files are used. If you run into any bugs, please export the logs, and submit to pg9182")
+		note.WriteString("\n")
+	}
+
 	note.WriteString("\n")
 	note.WriteString(fmt.Sprintf("Server version: %s", server.ServerVersion))
 	note.WriteString("\n")
@@ -527,6 +534,11 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 			builder.WriteString("Insecure: true")
 			builder.WriteString("\n")
 			builder.WriteString(fmt.Sprintf("IP: %s, Port: %d", server.MainIP, server.GameUDPPort))
+			builder.WriteString("\n")
+		}
+
+		if server.OptimizedServerFiles {
+			builder.WriteString("Optimized server files: true")
 			builder.WriteString("\n")
 		}
 
