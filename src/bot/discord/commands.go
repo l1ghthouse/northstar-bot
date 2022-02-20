@@ -86,7 +86,6 @@ var (
 					Type:        discordgo.ApplicationCommandOptionBoolean,
 					Name:        CreateWithOptimizedFilesOpt,
 					Description: "Whether to use optimized server files",
-					Choices:     serverCreateVersionChoices(),
 				},
 			}, modApplicationCommand()...),
 		},
