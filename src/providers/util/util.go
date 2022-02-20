@@ -70,6 +70,9 @@ const VersionPostfix = "_version"
 const LinkPostfix = "_link"
 const RequiredByClientPostfix = "_clientRequired"
 
+const vanillaServerFiles = "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp"
+const optimizedServerFiles = "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp-vpkoptim.951630d"
+
 func RestartServerScript() string {
 	return fmt.Sprintf("docker restart %s", containerName)
 }
@@ -101,6 +104,11 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 		}
 	}
 
+	serverFiles := vanillaServerFiles
+	if server.OptimizedServerFiles {
+		serverFiles = optimizedServerFiles
+	}
+
 	return fmt.Sprintf(`#!/bin/bash
 export IMAGE=%s
 export NS_AUTH_PORT="%d"
@@ -118,7 +126,7 @@ apt install parallel jq unzip zip -y
 
 echo "Downloading Titanfall2 Files"
 
-curl -L "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp" -s -H "Accept: application/vnd.oci.image.manifest.v1+json" -H "Authorization: Bearer QQ==" | jq -r '.layers[]|[.digest, .annotations."org.opencontainers.image.title"] | @tsv' |
+curl -L "%s" -s -H "Accept: application/vnd.oci.image.manifest.v1+json" -H "Authorization: Bearer QQ==" | jq -r '.layers[]|[.digest, .annotations."org.opencontainers.image.title"] | @tsv' |
 {
   paths=()
   uri=()
@@ -138,7 +146,7 @@ curl -L "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp" -s 
 %s
 
 docker run -d --pull always --publish $NS_AUTH_PORT:$NS_AUTH_PORT/tcp --publish $NS_PORT:$NS_PORT/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME --env NS_MASTERSERVER_URL --env NS_SERVER_DESC --env NS_AUTH_PORT --env NS_PORT --env NS_SERVER_PASSWORD --env NS_INSECURE --name "%s" $IMAGE
-`, server.DockerImageVersion, server.AuthTCPPort, server.GameUDPPort, server.MasterServer, server.Pin, Btoi(insecure), server.Region, server.Name, serverDesc, OptionalCmd, DockerArgs, containerName), nil
+`, server.DockerImageVersion, server.AuthTCPPort, server.GameUDPPort, server.MasterServer, server.Pin, Btoi(insecure), server.Region, server.Name, serverDesc, serverFiles, OptionalCmd, DockerArgs, containerName), nil
 }
 
 var RemoteFile = "/extract.zip"

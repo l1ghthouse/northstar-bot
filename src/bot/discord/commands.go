@@ -51,7 +51,8 @@ func serverCreateVersionChoices() (options []*discordgo.ApplicationCommandOption
 
 const CreateServerOptInsecure = "insecure"
 const CreateServerOptMasterServer = "master_server"
-const ServerVersion = "server_version"
+const CreateWithOptimizedFilesOpt = "optimized_files"
+const CreateServerVersionOpt = "server_version"
 
 var (
 	commands = []*discordgo.ApplicationCommand{
@@ -77,8 +78,14 @@ var (
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        ServerVersion,
+					Name:        CreateServerVersionOpt,
 					Description: "Version of the server to create. If not specified, the latest version will be used",
+					Choices:     serverCreateVersionChoices(),
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        CreateWithOptimizedFilesOpt,
+					Description: "Whether to use optimized server files",
 					Choices:     serverCreateVersionChoices(),
 				},
 			}, modApplicationCommand()...),
@@ -159,7 +166,6 @@ func optionValue(options []*discordgo.ApplicationCommandInteractionDataOption, n
 }
 
 func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsserver.NSServer {
-
 	var modOptions = make(map[string]interface{})
 	{
 		for modName := range mod.ByName {
@@ -194,7 +200,7 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsser
 	var serverVersion string
 	var dockerImageVersion string
 	{
-		val, ok := optionValue(interaction.ApplicationCommandData().Options, ServerVersion)
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerVersionOpt)
 		if ok {
 			dockerImageVersion = val.StringValue()
 			serverVersion = val.Name
@@ -203,20 +209,31 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsser
 		}
 	}
 
+	var withOptimizedFiles bool
+	{
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateWithOptimizedFilesOpt)
+		if ok {
+			withOptimizedFiles = val.BoolValue()
+		} else {
+			withOptimizedFiles = false
+		}
+	}
+
 	pin := password.MustGenerate(PinLength, PinLength, 0, false, true)
 
 	return &nsserver.NSServer{
-		Region:             interaction.ApplicationCommandData().Options[0].StringValue(),
-		RequestedBy:        interaction.Member.User.ID,
-		Name:               name,
-		Pin:                pin,
-		Options:            modOptions,
-		Insecure:           isInsecure,
-		ServerVersion:      serverVersion,
-		GameUDPPort:        37015,
-		AuthTCPPort:        8081,
-		DockerImageVersion: dockerImageVersion,
-		MasterServer:       masterServer,
+		Region:               interaction.ApplicationCommandData().Options[0].StringValue(),
+		RequestedBy:          interaction.Member.User.ID,
+		Name:                 name,
+		Pin:                  pin,
+		Options:              modOptions,
+		Insecure:             isInsecure,
+		ServerVersion:        serverVersion,
+		OptimizedServerFiles: withOptimizedFiles,
+		GameUDPPort:          37015,
+		AuthTCPPort:          8081,
+		DockerImageVersion:   dockerImageVersion,
+		MasterServer:         masterServer,
 	}
 }
 
