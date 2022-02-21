@@ -214,7 +214,7 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsser
 		if ok {
 			withOptimizedFiles = val.BoolValue()
 		} else {
-			withOptimizedFiles = false
+			withOptimizedFiles = true
 		}
 	}
 
