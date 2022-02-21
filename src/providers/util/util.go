@@ -71,7 +71,7 @@ const LinkPostfix = "_link"
 const RequiredByClientPostfix = "_clientRequired"
 
 const vanillaServerFiles = "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp"
-const optimizedServerFiles = "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp-vpkoptim.951630d"
+const optimizedServerFiles = "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp-vpkoptim.430d3bb"
 
 func RestartServerScript() string {
 	return fmt.Sprintf("docker restart %s", containerName)
