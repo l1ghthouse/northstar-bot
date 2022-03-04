@@ -13,7 +13,7 @@ const LTSRebalancedRepoName = "LTSRebalance"
 const LTSRebalancedModName = LTSRebalancedRepoOwner + "." + LTSRebalancedRepoName
 const LTSRebalancedModNameKVFix = LTSRebalancedModName + "_KVFix"
 
-func (h RebalancedLTS) ModParams(ctx context.Context) (string, string, string, string, bool, error) {
+func (r RebalancedLTS) ModParams(ctx context.Context) (string, string, string, string, bool, error) {
 	latestTag, err := latestGithubTag(ctx, LTSRebalancedRepoOwner, LTSRebalancedRepoName)
 	if err != nil {
 		return "", "", "", "", false, err
@@ -25,4 +25,8 @@ func (h RebalancedLTS) ModParams(ctx context.Context) (string, string, string, s
 	dockerArgs := dockerArgBuilder(fmt.Sprintf("/%s/%s", LTSRebalancedModName, LTSRebalancedModName), LTSRebalancedModName) + " " +
 		dockerArgBuilder(fmt.Sprintf("/%s/%s", LTSRebalancedModName, LTSRebalancedModNameKVFix), LTSRebalancedModNameKVFix)
 	return builder.String(), dockerArgs, link, latestTag, true, nil
+}
+
+func (r RebalancedLTS) EnabledByDefault() bool {
+	return false
 }

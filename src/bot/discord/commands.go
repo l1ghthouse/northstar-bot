@@ -168,7 +168,7 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsser
 	var modOptions = make(map[string]interface{})
 	{
 		for modName := range mod.ByName {
-			modOptions[modName] = false
+			modOptions[modName] = mod.ByName[modName]().EnabledByDefault()
 			val, ok := optionValue(interaction.ApplicationCommandData().Options, modName)
 			if ok {
 				modOptions[modName] = val.BoolValue()

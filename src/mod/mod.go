@@ -7,6 +7,7 @@ import (
 
 type Mod interface {
 	ModParams(ctx context.Context) (cmd string, dockerArgs string, downloadLink string, version string, requiredByClient bool, err error)
+	EnabledByDefault() bool
 }
 
 var ByName = map[string]func() Mod{
