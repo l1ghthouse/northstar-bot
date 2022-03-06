@@ -523,6 +523,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		builder.WriteString(fmt.Sprintf("Pin: `%s`", pin))
 		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("Server Version: %s", server.ServerVersion))
+		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("Requested by: <@%s>", user))
 		builder.WriteString("\n")
 		if server.MasterServer != DefaultServerServer {
