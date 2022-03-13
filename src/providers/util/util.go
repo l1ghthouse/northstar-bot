@@ -160,6 +160,7 @@ func FormatLogExtractionScript() string {
 set -e
 rm -rf /extract*
 CONTAINER_NAME=%s
+mkdir -p /extract-tmp/
 docker logs --details --timestamps $CONTAINER_NAME &> /extract-tmp/northstar.log
 zip -j %s /extract-tmp/*
 `, containerName, RemoteFile)
