@@ -149,7 +149,7 @@ curl -L "%s" -s -H "Accept: application/vnd.oci.image.manifest.v1+json" -H "Auth
 
 %s
 
-docker run -d --pull always --publish $NS_AUTH_PORT:$NS_AUTH_PORT/tcp --publish $NS_PORT:$NS_PORT/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME --env NS_MASTERSERVER_URL --env NS_SERVER_DESC --env NS_AUTH_PORT --env NS_PORT --env NS_SERVER_PASSWORD --env NS_INSECURE --name "%s" $IMAGE
+docker run -d --pull always --log-driver json-file --log-opt max-size=200m --publish $NS_AUTH_PORT:$NS_AUTH_PORT/tcp --publish $NS_PORT:$NS_PORT/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" %s --env NS_SERVER_NAME --env NS_MASTERSERVER_URL --env NS_SERVER_DESC --env NS_AUTH_PORT --env NS_PORT --env NS_SERVER_PASSWORD --env NS_INSECURE --name "%s" $IMAGE
 `, server.DockerImageVersion, server.AuthTCPPort, server.GameUDPPort, server.MasterServer, server.Pin, Btoi(insecure), server.Region, server.Name, serverDesc, serverFiles, OptionalCmd, DockerArgs, containerName), nil
 }
 
@@ -160,8 +160,8 @@ func FormatLogExtractionScript() string {
 set -e
 rm -rf /extract*
 CONTAINER_NAME=%s
-docker cp $CONTAINER_NAME:/tmp /extract-tmp
-zip -j %s /extract-tmp/*/R2Northstar/logs/*
+docker logs $CONTAINER_NAME > /extract-tmp/northstar.log
+zip -j %s /extract-tmp/*
 `, containerName, RemoteFile)
 }
 
