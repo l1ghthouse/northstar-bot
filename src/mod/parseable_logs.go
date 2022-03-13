@@ -13,5 +13,5 @@ func (p ParseableLogs) ModParams(ctx context.Context) (string, string, string, s
 }
 
 func (p ParseableLogs) EnabledByDefault() bool {
-	return true
+	return false
 }
