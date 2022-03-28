@@ -446,21 +446,23 @@ func (h *handler) handleRestartServer(session *discordgo.Session, interaction *d
 		}
 	}
 
+	sendInteractionDeferred(session, interaction)
+
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
 
 		return
 	}
 
 	err = h.p.RestartServer(ctx, server)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("failed to restart the target server. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to restart the target server. error: %v", err))
 
 		return
 	}
 
-	sendInteractionReply(session, interaction, fmt.Sprintf("restarted server %s", serverName))
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("restarted server %s", serverName))
 }
 
 func (h *handler) handleListServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
