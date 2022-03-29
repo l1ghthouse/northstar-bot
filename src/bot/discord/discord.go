@@ -19,7 +19,8 @@ type Config struct {
 	DcBotToken       string `required:"true"`
 	DcGuildID        string `required:"true"`
 	BotReportChannel string ``
-	DedicatedRoleID  string ``
+	BasicRoleID      string `` // Role that allows limited set of permissions
+	PrivilegedRoleID string `` // Elevated Bot role that allows same actions as server administrator
 }
 
 type discordBot struct {
@@ -53,7 +54,8 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 		nsRepo:               nsRepo,
 		maxServerCreateRate:  maxServersPerHour,
 		rateCounter:          counter,
-		dedicatedRoleID:      d.config.DedicatedRoleID,
+		basicRoleID:          d.config.BasicRoleID,
+		privilegedRoleID:     d.config.PrivilegedRoleID,
 		notifyer:             n,
 	}
 

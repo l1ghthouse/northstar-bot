@@ -139,7 +139,8 @@ type handler struct {
 	nsRepo               nsserver.Repo
 	maxServerCreateRate  uint
 	rateCounter          *ratecounter.RateCounter
-	dedicatedRoleID      string
+	basicRoleID          string
+	privilegedRoleID     string
 	notifyer             *Notifyer
 }
 
@@ -147,6 +148,9 @@ const unknown = "unknown"
 const PinLength = 4
 
 func hasRole(roles []string, role string) bool {
+	if role == "" {
+		return false
+	}
 	for _, r := range roles {
 		if r == role {
 			return true
@@ -388,10 +392,11 @@ func isAdministrator(permissions int64) bool {
 func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
-	if !isAdministrator(interaction.Member.Permissions) {
+
+	if !h.IsPrivilegedUser(interaction.Member) {
 		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
 		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-			sendInteractionReply(session, interaction, "Only Administrators and the person who requested the server can delete it")
+			sendInteractionReply(session, interaction, "Only Privileged Users and the person who requested the server can delete it")
 
 			return
 		}
@@ -437,10 +442,10 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 func (h *handler) handleRestartServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
-	if !isAdministrator(interaction.Member.Permissions) {
+	if !h.IsPrivilegedUser(interaction.Member) {
 		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
 		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-			sendInteractionReply(session, interaction, "Only Administrators and the person who requested the server can restart it")
+			sendInteractionReply(session, interaction, "Only Privileged Users and the person who requested the server can restart it")
 
 			return
 		}
