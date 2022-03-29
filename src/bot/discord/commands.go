@@ -196,7 +196,7 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsser
 		if ok {
 			masterServer = val.StringValue()
 		} else {
-			masterServer = DefaultServerServer
+			masterServer = DefaultMasterServer
 		}
 	}
 
@@ -240,7 +240,7 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsser
 	}
 }
 
-const DefaultServerServer = "https://northstar.tf"
+const DefaultMasterServer = "https://northstar.tf"
 
 func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
@@ -533,7 +533,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("Requested by: <@%s>", user))
 		builder.WriteString("\n")
-		if server.MasterServer != DefaultServerServer {
+		if server.MasterServer != DefaultMasterServer {
 			builder.WriteString(fmt.Sprintf("Master server: %s", server.MasterServer))
 			builder.WriteString("\n")
 		}
