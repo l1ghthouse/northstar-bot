@@ -70,10 +70,13 @@ func sendInteractionReply(s *discordgo.Session, i *discordgo.InteractionCreate, 
 var ErrInvalidRole = errors.New("missing required role to use this command")
 
 func (h *handler) handleAuthUser(member *discordgo.Member) error {
-	if isAdministrator(member.Permissions) || hasRole(member.Roles, h.basicRoleID) || hasRole(member.Roles, h.privilegedRoleID) {
+	if isAdministrator(member.Permissions) || hasRole(member.Roles, h.privilegedRoleID) {
 		return nil
 	}
-	return ErrInvalidRole
+	if h.basicRoleID != "" && !hasRole(member.Roles, h.basicRoleID) {
+		return ErrInvalidRole
+	}
+	return nil
 }
 
 func (h *handler) IsPrivilegedUser(member *discordgo.Member) bool {
