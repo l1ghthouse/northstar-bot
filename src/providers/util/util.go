@@ -35,8 +35,12 @@ func LatestStableDockerNorthstar() (string, string) {
 }
 
 var NorthstarVersions = map[string]DockerVersion{
-	"1.5.1-dev": {
+	"1.6.0": {
 		IsLatest:    true,
+		DockerImage: "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.6.0",
+	},
+	"1.5.1-dev": {
+		IsLatest:    false,
 		DockerImage: "ghcr.io/pg9182/northstar-dedicated-dev:dev.20220223.git0ca6e4c",
 	},
 	"1.5.1": {
