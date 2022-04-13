@@ -2,6 +2,7 @@ package discord
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -21,11 +22,12 @@ import (
 )
 
 const (
-	CreateServer  = "create_server"
-	ListServer    = "list_servers"
-	DeleteServer  = "delete_server"
-	ExtractLogs   = "extract_logs"
-	RestartServer = "restart_server"
+	CreateServer   = "create_server"
+	ListServer     = "list_servers"
+	DeleteServer   = "delete_server"
+	ExtractLogs    = "extract_logs"
+	RestartServer  = "restart_server"
+	ServerMetadata = "server_metadata"
 )
 
 func modApplicationCommand() (options []*discordgo.ApplicationCommandOption) {
@@ -128,6 +130,10 @@ var (
 		{
 			Name:        ListServer,
 			Description: "Command to list servers",
+		},
+		{
+			Name:        ServerMetadata,
+			Description: "Metadata associated with the server",
 		},
 	}
 )
@@ -470,6 +476,34 @@ func (h *handler) handleRestartServer(session *discordgo.Session, interaction *d
 	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("restarted server %s", serverName))
 }
 
+func (h *handler) handleServerMetadata(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+	ctx := context.Background()
+	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
+	if !h.IsPrivilegedUser(interaction.Member) {
+		sendInteractionReply(session, interaction, "Only Privileged Users can access server metadata")
+
+		return
+	}
+
+	server, err := h.nsRepo.GetByName(ctx, serverName)
+	if err != nil {
+		sendInteractionReply(session, interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+
+		return
+	}
+
+	serverMetadata, err := json.Marshal(server)
+	if err != nil {
+		sendInteractionReply(session, interaction, fmt.Sprintf("failed to marshal server struct. error: %v", err))
+
+		return
+	}
+
+	go sendComplexMessage(session, interaction.Member.User.ID, fmt.Sprintf("Server metadata:\n```%s```", string(serverMetadata)), nil)
+
+	sendInteractionReply(session, interaction, fmt.Sprintf("metadata for %s was sent to you privately", serverName))
+}
+
 func (h *handler) handleListServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	nsservers, err := h.p.GetRunningServers(ctx)
@@ -515,11 +549,11 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		}
 		options := ""
 		if server.Options != nil {
-			json, err := server.Options.MarshalJSON()
+			j, err := server.Options.MarshalJSON()
 			if err != nil {
 				options = fmt.Sprintf("failed to parse servers options. error: %v", err)
 			} else {
-				options = string(json)
+				options = string(j)
 			}
 		}
 		builder := strings.Builder{}
