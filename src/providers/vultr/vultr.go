@@ -287,29 +287,26 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 
 	server.DefaultPassword = instance.DefaultPassword
 
-	if server.Insecure {
-		ticker := time.NewTicker(7 * time.Second)
-		maxWait := time.After(time.Minute * 5)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-maxWait:
-				return errTimedOutToReceivePublicIP
-			case <-ticker.C:
-				instance, err = v.getVultrInstanceByName(ctx, server.Name, tag)
-				if err != nil {
-					return err
-				}
-				ip := net.ParseIP(instance.MainIP)
-				if ip.IsUnspecified() {
-					continue
-				}
-				server.MainIP = ip.String()
-				return nil
+	ticker := time.NewTicker(7 * time.Second)
+	maxWait := time.After(time.Minute * 5)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-maxWait:
+			return errTimedOutToReceivePublicIP
+		case <-ticker.C:
+			instance, err = v.getVultrInstanceByName(ctx, server.Name, tag)
+			if err != nil {
+				return err
 			}
+			ip := net.ParseIP(instance.MainIP)
+			if ip.IsUnspecified() {
+				continue
+			}
+			server.MainIP = ip.String()
+			return nil
 		}
 	}
-	return nil
 }
 
 func (v *vultrClient) listStartupScripts(ctx context.Context) ([]govultr.StartupScript, error) {
