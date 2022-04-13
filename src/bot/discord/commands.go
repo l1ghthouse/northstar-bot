@@ -134,6 +134,14 @@ var (
 		{
 			Name:        ServerMetadata,
 			Description: "Metadata associated with the server",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "name",
+					Description: "server name associated with metadata",
+					Required:    true,
+				},
+			},
 		},
 	}
 )
