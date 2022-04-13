@@ -507,7 +507,7 @@ func (h *handler) handleServerMetadata(session *discordgo.Session, interaction *
 		return
 	}
 
-	go sendComplexMessage(session, interaction.Member.User.ID, fmt.Sprintf("Server metadata:\n```%s```", string(serverMetadata)), nil)
+	go sendMessageWithFilesDM(session, interaction.Member.User.ID, fmt.Sprintf("Server metadata:\n```%s```", string(serverMetadata)), nil)
 
 	sendInteractionReply(session, interaction, fmt.Sprintf("metadata for %s was sent to you privately", serverName))
 }
