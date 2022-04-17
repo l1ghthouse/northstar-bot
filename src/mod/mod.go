@@ -14,6 +14,7 @@ var ByName = map[string]func() Mod{
 	"rebalanced_lts_mod": func() Mod { return &RebalancedLTS{} },
 	"holo_shift_mod":     func() Mod { return &HoloShift{} },
 	"parseable_logs":     func() Mod { return &ParseableLogs{} },
+	"ramp_water":         func() Mod { return &RampWater{} },
 }
 
 var ErrNoTagsFound = fmt.Errorf("no tags found")
