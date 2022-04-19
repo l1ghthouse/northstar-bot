@@ -321,16 +321,14 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		note.WriteString("\n")
 	}
 
-	if server.OptimizedServerFiles {
-		note.WriteString("\n")
-		note.WriteString("Optimized server files are used. If you run into any bugs, please export the logs, and submit to pg9182")
-		note.WriteString("\n")
-	}
-
 	note.WriteString("\n")
 	note.WriteString(fmt.Sprintf("Server version: %s", server.ServerVersion))
 	note.WriteString("\n")
-	note.WriteString("It will take the server around 5 minutes to come online")
+	timeToSpinUp := 5
+	if server.OptimizedServerFiles {
+		timeToSpinUp = 2
+	}
+	note.WriteString(fmt.Sprintf("It will take the server around %d minutes to come online", timeToSpinUp))
 	note.WriteString("\n")
 
 	if h.autoDeleteDuration != time.Duration(0) {
@@ -340,30 +338,32 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	}
 
 	modInfo := ""
+	modInfoMisc := ""
 
 	for option := range server.Options {
 		for modName := range mod.ByName {
 			if option == modName && server.Options[option].(bool) {
-				builder := strings.Builder{}
-				builder.WriteString("\n")
-				builder.WriteString(fmt.Sprintf("%s:", modName))
-				builder.WriteString("\n")
-				builder.WriteString(fmt.Sprintf("Version: **%s**", server.Options[modName+util.VersionPostfix]))
-				builder.WriteString("\n")
-				builder.WriteString(fmt.Sprintf("Download link: <%s>", server.Options[modName+util.LinkPostfix]))
-				builder.WriteString("\n")
-				builder.WriteString(fmt.Sprintf("Required by client: %v", server.Options[modName+util.RequiredByClientPostfix]))
-				builder.WriteString("\n")
-				builder.WriteString("====================")
-				modInfo += builder.String()
+				if modInfo == "" {
+					modInfo = "Following Mods Are Enabled:\n"
+				}
+				modInfo += fmt.Sprintf("%s(version: %s)\n", modName, server.Options[modName+util.VersionPostfix])
+
+				if server.Options[modName+util.RequiredByClientPostfix] == true {
+					if modInfoMisc == "" {
+						modInfoMisc = "Following Mods Are Required to be downloaded By Client:\n"
+					}
+					modInfoMisc += fmt.Sprintf("Download link: <%s>\n", server.Options[modName+util.LinkPostfix])
+				}
 			}
 		}
 	}
 
 	if modInfo != "" {
 		note.WriteString("\n")
-		note.WriteString("The server includes the following mods:")
 		note.WriteString(modInfo)
+		if modInfoMisc != "" {
+			note.WriteString(modInfoMisc)
+		}
 	}
 
 	editDeferredInteractionReply(session, interaction.Interaction, note.String())
