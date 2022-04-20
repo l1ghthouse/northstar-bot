@@ -40,6 +40,13 @@ var ByName = map[string]func() Mod{
 			requiredByClient: false,
 		}
 	},
+	"better_rise": func() Mod {
+		return &ThunderstoreMod{
+			enabledByDefault: true,
+			name:             "BetterRise",
+			requiredByClient: false,
+		}
+	},
 }
 
 type ThunderstoreMod struct {
