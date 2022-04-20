@@ -316,26 +316,22 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	note.WriteString("\n")
 
 	if server.Insecure {
-		note.WriteString("\n")
 		note.WriteString(fmt.Sprintf("Insecure mode is enabled. If master server is offline, use: `connect %s:%d`", server.MainIP, server.GameUDPPort))
 		note.WriteString("\n")
 	}
 
-	note.WriteString("\n")
-	note.WriteString(fmt.Sprintf("Server version: %s", server.ServerVersion))
-	note.WriteString("\n")
+	note.WriteString(fmt.Sprintf("Server version: **%s**", server.ServerVersion))
 	timeToSpinUp := 5
 	if server.OptimizedServerFiles {
 		timeToSpinUp = 2
 	}
-	note.WriteString(fmt.Sprintf("It will take the server around %d minutes to come online", timeToSpinUp))
-	note.WriteString("\n")
-
+	note.WriteString(fmt.Sprintf(". Server will be up in: **%d**", timeToSpinUp))
 	if h.autoDeleteDuration != time.Duration(0) {
-		note.WriteString("\n")
-		note.WriteString(fmt.Sprintf("This server will be deleted in %s", h.autoDeleteDuration.String()))
+		note.WriteString(fmt.Sprintf(", and autodeleted in in **%s**", h.autoDeleteDuration.String()))
 		note.WriteString("\n")
 	}
+
+	note.WriteString("\n")
 
 	modInfo := ""
 	modInfoMisc := ""
@@ -346,13 +342,13 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 				if modInfo == "" {
 					modInfo = "Following Mods Are Enabled:\n"
 				}
-				modInfo += fmt.Sprintf("%s(version: %s)\n", modName, server.Options[modName+util.VersionPostfix])
+				modInfo += fmt.Sprintf(" - %s(version: %s)\n", modName, server.Options[modName+util.VersionPostfix])
 
 				if server.Options[modName+util.RequiredByClientPostfix] == true {
 					if modInfoMisc == "" {
 						modInfoMisc = "Following Mods Are Required to be downloaded By Client:\n"
 					}
-					modInfoMisc += fmt.Sprintf("Download link: <%s>\n", server.Options[modName+util.LinkPostfix])
+					modInfoMisc += fmt.Sprintf(" - %s: <%s>\n", modName, server.Options[modName+util.LinkPostfix])
 				}
 			}
 		}
