@@ -325,7 +325,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	if server.OptimizedServerFiles {
 		timeToSpinUp = 2
 	}
-	note.WriteString(fmt.Sprintf(". Server will be up in: **%d**", timeToSpinUp))
+	note.WriteString(fmt.Sprintf(". Server will be up in: **%d** minutes", timeToSpinUp))
 	if h.autoDeleteDuration != time.Duration(0) {
 		note.WriteString(fmt.Sprintf(", and autodeleted in in **%s**", h.autoDeleteDuration.String()))
 	}
