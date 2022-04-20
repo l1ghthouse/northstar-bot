@@ -344,7 +344,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 
 				if server.Options[modName+util.RequiredByClientPostfix] == true {
 					if modInfoMisc == "" {
-						modInfoMisc = "Following Mods Are Required to be downloaded By Client:\n"
+						modInfoMisc = "Following mods are **REQUIRED TO BE DOWNLOADED BY CLIENT**:\n"
 					}
 					modInfoMisc += fmt.Sprintf(" - %s: <%s>\n", modName, server.Options[modName+util.LinkPostfix])
 				}
