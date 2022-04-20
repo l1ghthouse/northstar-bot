@@ -328,9 +328,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	note.WriteString(fmt.Sprintf(". Server will be up in: **%d**", timeToSpinUp))
 	if h.autoDeleteDuration != time.Duration(0) {
 		note.WriteString(fmt.Sprintf(", and autodeleted in in **%s**", h.autoDeleteDuration.String()))
-		note.WriteString("\n")
 	}
-
 	note.WriteString("\n")
 
 	modInfo := ""
