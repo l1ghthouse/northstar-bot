@@ -259,39 +259,39 @@ const DefaultMasterServer = "https://northstar.tf"
 func (h *handler) handleCreateServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 
+	sendInteractionDeferred(session, interaction)
+
 	if h.maxServerCreateRate != 0 && h.rateCounter.Rate() > int64(h.maxServerCreateRate) {
-		sendInteractionReply(session, interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
+		editDeferredInteractionReply(session, interaction.Interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
 
 		return
 	}
 	servers, err := h.p.GetRunningServers(ctx)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("unable to list running servers: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to list running servers: %v", err))
 
 		return
 	}
 	if len(servers) >= int(h.maxConcurrentServers) {
-		sendInteractionReply(session, interaction, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers))
 
 		return
 	}
 	cachedServers, err := h.nsRepo.GetAll(ctx)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("unable to list servers: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to list servers: %v", err))
 
 		return
 	}
 
 	name, err := generateUniqueName(servers, cachedServers)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("unable to generate unique server name: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to generate unique server name: %v", err))
 
 		return
 	}
 
 	server := defaultServer(name, interaction)
-
-	sendInteractionDeferred(session, interaction)
 
 	err = h.p.CreateServer(ctx, server)
 	if err != nil {
