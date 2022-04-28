@@ -400,17 +400,16 @@ func isAdministrator(permissions int64) bool {
 func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
+	sendInteractionDeferred(session, interaction)
 
 	if !h.IsPrivilegedUser(interaction.Member) {
 		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
 		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-			sendInteractionReply(session, interaction, "Only Privileged Users and the person who requested the server can delete it")
+			editDeferredInteractionReply(session, interaction.Interaction, "Only Privileged Users and the person who requested the server can delete it")
 
 			return
 		}
 	}
-
-	sendInteractionDeferred(session, interaction)
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
@@ -450,16 +449,17 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 func (h *handler) handleRestartServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
+
+	sendInteractionDeferred(session, interaction)
+
 	if !h.IsPrivilegedUser(interaction.Member) {
 		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
 		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-			sendInteractionReply(session, interaction, "Only Privileged Users and the person who requested the server can restart it")
+			editDeferredInteractionReply(session, interaction.Interaction, "Only Privileged Users and the person who requested the server can restart it")
 
 			return
 		}
 	}
-
-	sendInteractionDeferred(session, interaction)
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
@@ -481,43 +481,49 @@ func (h *handler) handleRestartServer(session *discordgo.Session, interaction *d
 func (h *handler) handleServerMetadata(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
+
+	sendInteractionDeferred(session, interaction)
+
 	if !h.IsPrivilegedUser(interaction.Member) {
-		sendInteractionReply(session, interaction, "Only Privileged Users can access server metadata")
+		editDeferredInteractionReply(session, interaction.Interaction, "Only Privileged Users can access server metadata")
 
 		return
 	}
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
 
 		return
 	}
 
 	serverMetadata, err := json.Marshal(server)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("failed to marshal server struct. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to marshal server struct. error: %v", err))
 
 		return
 	}
 
 	go sendMessageWithFilesDM(session, interaction.Member.User.ID, fmt.Sprintf("Server metadata:\n```%s```", string(serverMetadata)), nil)
 
-	sendInteractionReply(session, interaction, fmt.Sprintf("metadata for %s was sent to you privately", serverName))
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("metadata for %s was sent to you privately", serverName))
 }
 
 func (h *handler) handleListServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
+
+	sendInteractionDeferred(session, interaction)
+
 	nsservers, err := h.p.GetRunningServers(ctx)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("failed to list running servers. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to list running servers. error: %v", err))
 
 		return
 	}
 
 	cachedServers, err := h.nsRepo.GetAll(ctx)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("failed to list running servers from database. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to list running servers from database. error: %v", err))
 
 		return
 	}
@@ -536,7 +542,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 	servers := make([]string, len(nsservers))
 
 	if len(nsservers) == 0 {
-		sendInteractionReply(session, interaction, "No servers running")
+		editDeferredInteractionReply(session, interaction.Interaction, "No servers running")
 
 		return
 	}
@@ -596,21 +602,20 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		servers[idx] = builder.String()
 	}
 
-	sendInteractionReply(session, interaction, strings.Join(servers, "\n"))
+	editDeferredInteractionReply(session, interaction.Interaction, strings.Join(servers, "\n"))
 }
 
 func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
-
+	sendInteractionDeferred(session, interaction)
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
-		sendInteractionReply(session, interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
 
 		return
 	}
 
-	sendInteractionDeferred(session, interaction)
 	file, err := h.p.ExtractServerLogs(ctx, server)
 	if err != nil {
 		failure := fmt.Sprintf("failed to extract logs from target server. error: %v", err)
