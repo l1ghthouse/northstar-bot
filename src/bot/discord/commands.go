@@ -55,6 +55,7 @@ const CreateServerOptInsecure = "insecure"
 const CreateServerOptMasterServer = "master_server"
 const CreateWithOptimizedFilesOpt = "optimized_files"
 const CreateServerVersionOpt = "server_version"
+const ListServerVerbosityOpt = "verbosity"
 
 var (
 	commands = []*discordgo.ApplicationCommand{
@@ -130,6 +131,14 @@ var (
 		{
 			Name:        ListServer,
 			Description: "Command to list servers",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        ListServerVerbosityOpt,
+					Description: "indicates if the list should be verbose",
+					Required:    false,
+				},
+			},
 		},
 		{
 			Name:        ServerMetadata,
@@ -528,6 +537,16 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		return
 	}
 
+	var verbose bool
+	{
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, ListServerVerbosityOpt)
+		if ok {
+			verbose = val.BoolValue()
+		} else {
+			verbose = false
+		}
+	}
+
 	for _, cached := range cachedServers {
 		for _, server := range nsservers {
 			if server.Name == cached.Name {
@@ -591,8 +610,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 			builder.WriteString("Optimized server files: true")
 			builder.WriteString("\n")
 		}
-
-		if options != "" {
+		if options != "" && verbose {
 			builder.WriteString(fmt.Sprintf("Options: \n```\n%s```\n", options))
 		}
 		if h.autoDeleteDuration > time.Duration(0) {
