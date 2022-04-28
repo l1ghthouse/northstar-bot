@@ -43,11 +43,6 @@ func editDeferredInteractionReply(session *discordgo.Session, interaction *disco
 func sendInteractionDeferred(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			AllowedMentions: &discordgo.MessageAllowedMentions{
-				Users: []string{},
-			},
-		},
 	}); err != nil {
 		log.Println("Error sending message: ", err)
 	}
