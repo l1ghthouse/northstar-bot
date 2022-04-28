@@ -34,7 +34,7 @@ func sendMessage(session *discordgo.Session, channelID string, msg string) {
 
 func editDeferredInteractionReply(session *discordgo.Session, interaction *discordgo.Interaction, msg string) {
 	response := &discordgo.WebhookEdit{Content: msg}
-	_, err := session.InteractionResponseEdit(session.State.User.ID, interaction, response)
+	_, err := session.InteractionResponseEdit(interaction, response)
 	if err != nil {
 		log.Println(fmt.Sprintf("failed to update interaction. error: %v", err))
 	}

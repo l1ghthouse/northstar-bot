@@ -40,6 +40,8 @@ github.com/bramvdbogaerde/go-scp v1.2.0 h1:mNF1lCXQ6jQcxCBBuc2g/CQwVy/4QONaoD5Aq
 github.com/bramvdbogaerde/go-scp v1.2.0/go.mod h1:s4ZldBoRAOgUg8IrRP2Urmq5qqd2yPXQTPshACY8vQ0=
 github.com/bwmarrin/discordgo v0.23.3-0.20211027235626-007bf7679048 h1:DnSeHZm0ZWwQkc5x9GTokTUULmrkkJbPfvUP5s5vLhM=
 github.com/bwmarrin/discordgo v0.23.3-0.20211027235626-007bf7679048/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
+github.com/bwmarrin/discordgo v0.25.0 h1:NXhdfHRNxtwso6FPdzW2i3uBvvU7UIQTghmV2T4nqAs=
+github.com/bwmarrin/discordgo v0.25.0/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=

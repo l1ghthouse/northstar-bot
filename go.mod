@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/bramvdbogaerde/go-scp v1.2.0
-	github.com/bwmarrin/discordgo v0.23.3-0.20211027235626-007bf7679048
+	github.com/bwmarrin/discordgo v0.25.0
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/google/go-github/v42 v42.0.0
 	github.com/jinzhu/configor v1.2.1
