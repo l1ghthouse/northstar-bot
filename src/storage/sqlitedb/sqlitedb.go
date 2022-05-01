@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
-	file_path string `default:"./northstar-bot.db"`
+	file_path string `default:"nsbot.db"`
 }
 
 func NewSqliteDB(config Config) (*gorm.DB, error) {
