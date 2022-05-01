@@ -12,6 +12,7 @@ type Mod interface {
 
 var ByName = map[string]func() Mod{
 	"rebalanced_lts_mod": func() Mod { return &RebalancedLTS{} },
+	"ctf_test_spawns":    func() Mod { return &TestCTFSpawns{} },
 	"holo_shift_mod": func() Mod {
 		return &ThunderstoreMod{
 			enabledByDefault: false,
@@ -28,21 +29,21 @@ var ByName = map[string]func() Mod{
 	},
 	"ramp_water": func() Mod {
 		return &ThunderstoreMod{
-			enabledByDefault: true,
+			enabledByDefault: false,
 			name:             "RampWater",
 			requiredByClient: false,
 		}
 	},
 	"better_homestead": func() Mod {
 		return &ThunderstoreMod{
-			enabledByDefault: true,
+			enabledByDefault: false,
 			name:             "BetterHomestead",
 			requiredByClient: false,
 		}
 	},
 	"better_rise": func() Mod {
 		return &ThunderstoreMod{
-			enabledByDefault: true,
+			enabledByDefault: false,
 			name:             "BetterRise",
 			requiredByClient: false,
 		}
