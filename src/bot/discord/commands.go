@@ -8,7 +8,7 @@ import (
 	"log"
 	"strings"
 	"time"
-
+	"sync"
 	"github.com/l1ghthouse/northstar-bootstrap/src/mod"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
 
@@ -164,6 +164,7 @@ type handler struct {
 	rateCounter          *ratecounter.RateCounter
 	basicRoleID          string
 	privilegedRoleID     string
+	createLock			 sync.Mutex
 	notifyer             *Notifyer
 }
 
@@ -270,6 +271,8 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 
 	sendInteractionDeferred(session, interaction)
 
+	h.createLock.Lock()
+	defer h.createLock.Unlock()
 	if h.maxServerCreateRate != 0 && h.rateCounter.Rate() > int64(h.maxServerCreateRate) {
 		editDeferredInteractionReply(session, interaction.Interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
 
