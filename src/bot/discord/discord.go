@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/l1ghthouse/northstar-bootstrap/src/autodelete"
@@ -55,6 +56,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 		maxServerCreateRate:  maxServersPerHour,
 		rateCounter:          counter,
 		basicRoleID:          d.config.BasicRoleID,
+		createLock:           &sync.Mutex{},
 		privilegedRoleID:     d.config.PrivilegedRoleID,
 		notifyer:             n,
 	}

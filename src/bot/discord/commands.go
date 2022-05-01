@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"strings"
-	"time"
-	"sync"
 	"github.com/l1ghthouse/northstar-bootstrap/src/mod"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
+	"log"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/paulbellamy/ratecounter"
 
@@ -164,7 +164,7 @@ type handler struct {
 	rateCounter          *ratecounter.RateCounter
 	basicRoleID          string
 	privilegedRoleID     string
-	createLock			 sync.Mutex
+	createLock           *sync.Mutex
 	notifyer             *Notifyer
 }
 
