@@ -230,7 +230,12 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsser
 		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerVersionOpt)
 		if ok {
 			dockerImageVersion = val.StringValue()
-			serverVersion = val.Name
+			for k, v := range util.NorthstarVersions {
+				if v.DockerImage == dockerImageVersion {
+					serverVersion = k
+					break
+				}
+			}
 		} else {
 			serverVersion, dockerImageVersion = util.LatestStableDockerNorthstar()
 		}
