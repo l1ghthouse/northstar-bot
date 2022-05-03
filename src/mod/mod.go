@@ -48,6 +48,13 @@ var ByName = map[string]func() Mod{
 			requiredByClient: false,
 		}
 	},
+	"archon": func() Mod {
+		return &ThunderstoreMod{
+			enabledByDefault: false,
+			name:             "MoblinArchon",
+			requiredByClient: true,
+		}
+	},
 }
 
 type ThunderstoreMod struct {
