@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/l1ghthouse/northstar-bootstrap/src/mod"
-	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
 	"log"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/l1ghthouse/northstar-bootstrap/src/mod"
+	"github.com/l1ghthouse/northstar-bootstrap/src/providers/util"
 
 	"github.com/paulbellamy/ratecounter"
 
@@ -401,13 +402,6 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
 	sendInteractionDeferred(session, interaction)
 
-	cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
-	if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-		editDeferredInteractionReply(session, interaction.Interaction, "Only Privileged Users and the person who requested the server can delete it")
-
-		return
-	}
-
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
 		log.Println(fmt.Sprintf("unable to get server by name: %v", err))
@@ -449,12 +443,6 @@ func (h *handler) handleRestartServer(session *discordgo.Session, interaction *d
 
 	sendInteractionDeferred(session, interaction)
 
-	cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
-	if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-		editDeferredInteractionReply(session, interaction.Interaction, "Only Privileged Users and the person who requested the server can restart it")
-
-		return
-	}
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
 		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
