@@ -89,16 +89,32 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 	}
 
 	for _, c := range cmd {
-		err = discordClient.ApplicationCommandDelete(discordClient.State.User.ID, d.config.DcGuildID, c.ID)
-		if err != nil {
-			return nil, fmt.Errorf("error deleting command: %w", err)
+		if _, ok := commandHandlers[c.Name]; !ok {
+			err = discordClient.ApplicationCommandDelete(discordClient.State.User.ID, d.config.DcGuildID, c.ID)
+			if err != nil {
+				return nil, fmt.Errorf("error deleting command: %w", err)
+			}
 		}
 	}
 
-	for _, v := range commands {
-		_, err = discordClient.ApplicationCommandCreate(discordClient.State.User.ID, d.config.DcGuildID, v)
-		if err != nil {
-			return nil, fmt.Errorf("cannot create '%v' command: %w", v.Name, err)
+	for _, newCommand := range commands {
+		var oldCommand *discordgo.ApplicationCommand
+		for _, c := range cmd {
+			if c.Name == newCommand.Name {
+				oldCommand = c
+			}
+		}
+
+		if oldCommand == nil {
+			_, err = discordClient.ApplicationCommandCreate(discordClient.State.User.ID, d.config.DcGuildID, newCommand)
+			if err != nil {
+				return nil, fmt.Errorf("cannot create '%v' command: %w", newCommand.Name, err)
+			}
+		} else {
+			_, err = discordClient.ApplicationCommandEdit(discordClient.State.User.ID, d.config.DcGuildID, oldCommand.ID, newCommand)
+			if err != nil {
+				return nil, fmt.Errorf("cannot update '%v' command: %w", newCommand.Name, err)
+			}
 		}
 	}
 
