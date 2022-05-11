@@ -9,7 +9,6 @@ import (
 type TestCTFSpawns struct{}
 
 func (r TestCTFSpawns) ModParams(ctx context.Context) (string, string, string, string, bool, error) {
-
 	linkOrigin := "https://raw.githubusercontent.com/R2Northstar/NorthstarMods/maybe-better-ctf-spawns-pr/"
 	fileContainerOrigin := "/usr/lib/northstar/R2Northstar/mods/"
 	files := []string{

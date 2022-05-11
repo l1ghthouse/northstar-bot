@@ -1,7 +1,6 @@
 package discord
 
 import (
-	"errors"
 	"fmt"
 	"log"
 
@@ -46,37 +45,4 @@ func sendInteractionDeferred(s *discordgo.Session, i *discordgo.InteractionCreat
 	}); err != nil {
 		log.Println("Error sending message: ", err)
 	}
-}
-
-func sendInteractionReply(s *discordgo.Session, i *discordgo.InteractionCreate, msg string) {
-	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: msg,
-			AllowedMentions: &discordgo.MessageAllowedMentions{
-				Users: []string{},
-			},
-		},
-	}); err != nil {
-		log.Println("Error sending message: ", err)
-	}
-}
-
-var ErrInvalidRole = errors.New("missing required role to use this command")
-
-func (h *handler) handleAuthUser(member *discordgo.Member) error {
-	if isAdministrator(member.Permissions) || hasRole(member.Roles, h.privilegedRoleID) {
-		return nil
-	}
-	if h.basicRoleID != "" && !hasRole(member.Roles, h.basicRoleID) {
-		return ErrInvalidRole
-	}
-	return nil
-}
-
-func (h *handler) IsPrivilegedUser(member *discordgo.Member) bool {
-	if isAdministrator(member.Permissions) || hasRole(member.Roles, h.privilegedRoleID) {
-		return true
-	}
-	return false
 }

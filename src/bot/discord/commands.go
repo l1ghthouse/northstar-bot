@@ -162,26 +162,12 @@ type handler struct {
 	nsRepo               nsserver.Repo
 	maxServerCreateRate  uint
 	rateCounter          *ratecounter.RateCounter
-	basicRoleID          string
-	privilegedRoleID     string
 	createLock           *sync.Mutex
 	notifyer             *Notifyer
 }
 
 const unknown = "unknown"
 const PinLength = 4
-
-func hasRole(roles []string, role string) bool {
-	if role == "" {
-		return false
-	}
-	for _, r := range roles {
-		if r == role {
-			return true
-		}
-	}
-	return false
-}
 
 func optionValue(options []*discordgo.ApplicationCommandInteractionDataOption, name string) (*discordgo.ApplicationCommandInteractionDataOption, bool) {
 	for _, option := range options {
@@ -410,22 +396,16 @@ func generateUniqueName(servers []*nsserver.NSServer, cachedServers []*nsserver.
 	return name, nil
 }
 
-func isAdministrator(permissions int64) bool {
-	return permissions&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator
-}
-
 func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
 	sendInteractionDeferred(session, interaction)
 
-	if !h.IsPrivilegedUser(interaction.Member) {
-		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
-		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-			editDeferredInteractionReply(session, interaction.Interaction, "Only Privileged Users and the person who requested the server can delete it")
+	cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
+	if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
+		editDeferredInteractionReply(session, interaction.Interaction, "Only Privileged Users and the person who requested the server can delete it")
 
-			return
-		}
+		return
 	}
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
@@ -469,15 +449,12 @@ func (h *handler) handleRestartServer(session *discordgo.Session, interaction *d
 
 	sendInteractionDeferred(session, interaction)
 
-	if !h.IsPrivilegedUser(interaction.Member) {
-		cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
-		if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
-			editDeferredInteractionReply(session, interaction.Interaction, "Only Privileged Users and the person who requested the server can restart it")
+	cachedServer, err := h.nsRepo.GetByName(ctx, serverName)
+	if err != nil || cachedServer.RequestedBy != interaction.Member.User.ID {
+		editDeferredInteractionReply(session, interaction.Interaction, "Only Privileged Users and the person who requested the server can restart it")
 
-			return
-		}
+		return
 	}
-
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
 		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
@@ -500,12 +477,6 @@ func (h *handler) handleServerMetadata(session *discordgo.Session, interaction *
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
 
 	sendInteractionDeferred(session, interaction)
-
-	if !h.IsPrivilegedUser(interaction.Member) {
-		editDeferredInteractionReply(session, interaction.Interaction, "Only Privileged Users can access server metadata")
-
-		return
-	}
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {

@@ -20,8 +20,6 @@ type Config struct {
 	DcBotToken       string `required:"true"`
 	DcGuildID        string `required:"true"`
 	BotReportChannel string ``
-	BasicRoleID      string `` // Role that allows limited set of permissions
-	PrivilegedRoleID string `` // Elevated Bot role that allows same actions as server administrator
 }
 
 type discordBot struct {
@@ -55,9 +53,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 		nsRepo:               nsRepo,
 		maxServerCreateRate:  maxServersPerHour,
 		rateCounter:          counter,
-		basicRoleID:          d.config.BasicRoleID,
 		createLock:           &sync.Mutex{},
-		privilegedRoleID:     d.config.PrivilegedRoleID,
 		notifyer:             n,
 	}
 
@@ -71,12 +67,6 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 
 	discordClient.AddHandler(func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		if handlerFunc, ok := commandHandlers[interaction.ApplicationCommandData().Name]; ok {
-			err := botHandler.handleAuthUser(interaction.Interaction.Member)
-			if err != nil {
-				sendInteractionReply(session, interaction, fmt.Sprintf("Permission Error: %s", err))
-
-				return
-			}
 			handlerFunc(session, interaction)
 		}
 	})
