@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 
 	"github.com/l1ghthouse/northstar-bootstrap/src/mod"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
@@ -34,42 +35,22 @@ func LatestStableDockerNorthstar() (string, string) {
 	return "", ""
 }
 
+const NorthstarDedicatedRepo = "ghcr.io/pg9182/"
+
+var DockerTagRegexp = regexp.MustCompile("^(northstar-dedicated|northstar-dedicated-dev):([a-zA-Z0-9_.-]{1,128})$")
+
 var NorthstarVersions = map[string]DockerVersion{
 	"1.7.0": {
 		IsLatest:    true,
-		DockerImage: "ghcr.io/pg9182/northstar-dedicated:1.20220502.git04c1bf6-tf2.0.11.0-ns1.7.0", // "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.7.0",
+		DockerImage: NorthstarDedicatedRepo + "northstar-dedicated:1.20220502.git04c1bf6-tf2.0.11.0-ns1.7.0", // "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.7.0",
 	},
 	"1.6.4": {
 		IsLatest:    false,
-		DockerImage: "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.6.4",
+		DockerImage: NorthstarDedicatedRepo + "northstar-dedicated:1-tf2.0.11.0-ns1.6.4",
 	},
 	"1.6.3": {
 		IsLatest:    false,
-		DockerImage: "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.6.3",
-	},
-	"1.6.0-dev": {
-		IsLatest:    false,
-		DockerImage: "ghcr.io/pg9182/northstar-dedicated-dev:dev.20220330.gitfc7a0c0",
-	},
-	"1.6.0": {
-		IsLatest:    false,
-		DockerImage: "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.6.0",
-	},
-	"1.5.1-dev": {
-		IsLatest:    false,
-		DockerImage: "ghcr.io/pg9182/northstar-dedicated-dev:dev.20220223.git0ca6e4c",
-	},
-	"1.5.1": {
-		IsLatest:    false,
-		DockerImage: "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.5.1",
-	},
-	"1.5.0": {
-		IsLatest:    false,
-		DockerImage: "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.5.0",
-	},
-	"1.4.0": {
-		IsLatest:    false,
-		DockerImage: "ghcr.io/pg9182/northstar-dedicated:1-tf2.0.11.0-ns1.4.0",
+		DockerImage: NorthstarDedicatedRepo + "northstar-dedicated:1-tf2.0.11.0-ns1.6.3",
 	},
 }
 

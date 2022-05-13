@@ -56,6 +56,7 @@ const CreateServerOptInsecure = "insecure"
 const CreateServerOptMasterServer = "master_server"
 const CreateWithOptimizedFilesOpt = "optimized_files"
 const CreateServerVersionOpt = "server_version"
+const CreateServerCustomDockerContainerOpt = "custom_container"
 const ListServerVerbosityOpt = "verbosity"
 
 var (
@@ -90,6 +91,11 @@ var (
 					Type:        discordgo.ApplicationCommandOptionBoolean,
 					Name:        CreateWithOptimizedFilesOpt,
 					Description: "Whether to use optimized server files",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        CreateServerCustomDockerContainerOpt,
+					Description: "Custom Docker Container to overwrite the default one. The Container must be under ghcr.io/pg9182/, in following format: NAME:TAG",
 				},
 			}, modApplicationCommand()...),
 		},
@@ -179,7 +185,7 @@ func optionValue(options []*discordgo.ApplicationCommandInteractionDataOption, n
 	return nil, false
 }
 
-func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsserver.NSServer {
+func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsserver.NSServer, error) {
 	var modOptions = make(map[string]interface{})
 	{
 		for modName := range mod.ByName {
@@ -214,16 +220,27 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsser
 	var serverVersion string
 	var dockerImageVersion string
 	{
-		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerVersionOpt)
-		if ok {
-			dockerImageVersion = val.StringValue()
+		valServerVersion, okServerVersion := optionValue(interaction.ApplicationCommandData().Options, CreateServerVersionOpt)
+		valTagVersion, okTagVersion := optionValue(interaction.ApplicationCommandData().Options, CreateServerCustomDockerContainerOpt)
+
+		switch {
+		case okServerVersion && okTagVersion:
+			return nil, fmt.Errorf("cannot specify both /%s and /%s", CreateServerVersionOpt, CreateServerCustomDockerContainerOpt)
+		case okServerVersion:
+			dockerImageVersion = valServerVersion.StringValue()
 			for k, v := range util.NorthstarVersions {
 				if v.DockerImage == dockerImageVersion {
 					serverVersion = k
 					break
 				}
 			}
-		} else {
+		case okTagVersion:
+			if util.DockerTagRegexp.MatchString(valTagVersion.StringValue()) {
+				dockerImageVersion = util.NorthstarDedicatedRepo + valTagVersion.StringValue()
+			} else {
+				return nil, fmt.Errorf("invalid docker tag: %s. Must match following regex: %s", valTagVersion.StringValue(), util.DockerTagRegexp)
+			}
+		default:
 			serverVersion, dockerImageVersion = util.LatestStableDockerNorthstar()
 		}
 	}
@@ -253,7 +270,7 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) *nsser
 		AuthTCPPort:          8081,
 		DockerImageVersion:   dockerImageVersion,
 		MasterServer:         masterServer,
-	}
+	}, nil
 }
 
 const DefaultMasterServer = "https://northstar.tf"
@@ -295,7 +312,10 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		return
 	}
 
-	server := defaultServer(name, interaction)
+	server, err := defaultServer(name, interaction)
+	if err != nil {
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to create server: %v", err))
+	}
 
 	err = h.p.CreateServer(ctx, server)
 	if err != nil {
