@@ -54,7 +54,6 @@ func serverCreateVersionChoices() (options []*discordgo.ApplicationCommandOption
 
 const CreateServerOptInsecure = "insecure"
 const CreateServerOptMasterServer = "master_server"
-const CreateWithOptimizedFilesOpt = "optimized_files"
 const CreateServerVersionOpt = "server_version"
 const CreateServerCustomDockerContainerOpt = "custom_container"
 const ListServerVerbosityOpt = "verbosity"
@@ -88,14 +87,9 @@ var (
 					Choices:     serverCreateVersionChoices(),
 				},
 				{
-					Type:        discordgo.ApplicationCommandOptionBoolean,
-					Name:        CreateWithOptimizedFilesOpt,
-					Description: "Whether to use optimized server files",
-				},
-				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        CreateServerCustomDockerContainerOpt,
-					Description: "Custom Docker Container to overwrite the default one. The Container must be under ghcr.io/pg9182/, in following format: NAME:TAG",
+					Description: "The Custom Docker Container must be under ghcr.io/pg9182/. Format: NAME:TAG",
 				},
 			}, modApplicationCommand()...),
 		},
@@ -245,31 +239,20 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsse
 		}
 	}
 
-	var withOptimizedFiles bool
-	{
-		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateWithOptimizedFilesOpt)
-		if ok {
-			withOptimizedFiles = val.BoolValue()
-		} else {
-			withOptimizedFiles = true
-		}
-	}
-
 	pin := password.MustGenerate(PinLength, PinLength, 0, false, true)
 
 	return &nsserver.NSServer{
-		Region:               interaction.ApplicationCommandData().Options[0].StringValue(),
-		RequestedBy:          interaction.Member.User.ID,
-		Name:                 name,
-		Pin:                  pin,
-		Options:              modOptions,
-		Insecure:             isInsecure,
-		ServerVersion:        serverVersion,
-		OptimizedServerFiles: withOptimizedFiles,
-		GameUDPPort:          37015,
-		AuthTCPPort:          8081,
-		DockerImageVersion:   dockerImageVersion,
-		MasterServer:         masterServer,
+		Region:             interaction.ApplicationCommandData().Options[0].StringValue(),
+		RequestedBy:        interaction.Member.User.ID,
+		Name:               name,
+		Pin:                pin,
+		Options:            modOptions,
+		Insecure:           isInsecure,
+		ServerVersion:      serverVersion,
+		GameUDPPort:        37015,
+		AuthTCPPort:        8081,
+		DockerImageVersion: dockerImageVersion,
+		MasterServer:       masterServer,
 	}, nil
 }
 
@@ -345,10 +328,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	}
 
 	note.WriteString(fmt.Sprintf("Server version: **%s**", server.ServerVersion))
-	timeToSpinUp := 5
-	if server.OptimizedServerFiles {
-		timeToSpinUp = 2
-	}
+	timeToSpinUp := 2
 	note.WriteString(fmt.Sprintf(". Server will be up in: **%d** minutes", timeToSpinUp))
 	if h.autoDeleteDuration != time.Duration(0) {
 		note.WriteString(fmt.Sprintf(", and autodeleted in in **%s**", h.autoDeleteDuration.String()))
@@ -593,10 +573,6 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 			builder.WriteString("\n")
 		}
 
-		if server.OptimizedServerFiles {
-			builder.WriteString("Optimized server files: true")
-			builder.WriteString("\n")
-		}
 		if options != "" && verbose {
 			builder.WriteString(fmt.Sprintf("Options: \n```\n%s```\n", options))
 		}

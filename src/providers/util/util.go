@@ -75,7 +75,6 @@ const VersionPostfix = "_version"
 const LinkPostfix = "_link"
 const RequiredByClientPostfix = "_clientRequired"
 
-const vanillaServerFiles = "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp"
 const optimizedServerFiles = "https://ghcr.io/v2/nsres/titanfall/manifests/2.0.11.0-dedicated-mp-vpkoptim.430d3bb"
 
 func RestartServerScript() string {
@@ -109,10 +108,7 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 		}
 	}
 
-	serverFiles := vanillaServerFiles
-	if server.OptimizedServerFiles {
-		serverFiles = optimizedServerFiles
-	}
+	serverFiles := optimizedServerFiles
 
 	return fmt.Sprintf(`#!/bin/bash
 export IMAGE=%s
