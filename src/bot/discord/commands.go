@@ -231,6 +231,7 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsse
 		case okTagVersion:
 			if util.DockerTagRegexp.MatchString(valTagVersion.StringValue()) {
 				dockerImageVersion = util.NorthstarDedicatedRepo + valTagVersion.StringValue()
+				serverVersion = unknown
 			} else {
 				return nil, fmt.Errorf("invalid docker tag: %s. Must match following regex: %s", valTagVersion.StringValue(), util.DockerTagRegexp)
 			}
