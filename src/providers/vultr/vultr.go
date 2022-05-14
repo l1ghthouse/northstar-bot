@@ -279,8 +279,8 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 		}
 
 		instance, err = v.client.Instance.Create(ctx, instanceOptions)
-		if err != nil {
-			continue
+		if err == nil {
+			break
 		}
 	}
 
