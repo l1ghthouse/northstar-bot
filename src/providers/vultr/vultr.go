@@ -242,6 +242,7 @@ func (v *vultrClient) getVultrInstanceByName(ctx context.Context, serverName str
 }
 
 var errTimedOutToReceivePublicIP = errors.New("timed out to receive public IP")
+var vultrPlans = []string{"vc2-4c-8gb", "vhp-4c-8gb-intel", "vhp-4c-8gb-amd"}
 
 func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsserver.NSServer, regionID string, tag string) error {
 	// Create a base64 encoded script that will: Download northstar container, and Titanfall2 files from git, to startup the server
@@ -265,17 +266,24 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 		return fmt.Errorf("unable to create startup script: %w", err)
 	}
 
-	instanceOptions := &govultr.InstanceCreateReq{
-		Region:   regionID,
-		Plan:     "vc2-4c-8gb", // 4cpu, 8gb plan until single core is supported. More info: https://www.vultr.com/api/#operation/list-os
-		Label:    server.Name,
-		AppID:    ubuntuDockerImageID,
-		UserData: cmd,          // Command to pull docker container, and create a server
-		ScriptID: resScript.ID, // Startup script
-		Tag:      tag,          // ephemeral is used to autodelete the instance after some time
+	var instance *govultr.Instance
+	for _, plan := range vultrPlans {
+		instanceOptions := &govultr.InstanceCreateReq{
+			Region:   regionID,
+			Plan:     plan, // One of: 4cpu, 8gb plan until single core is supported. More info: https://www.vultr.com/api/#operation/list-os
+			Label:    server.Name,
+			AppID:    ubuntuDockerImageID,
+			UserData: cmd,          // Command to pull docker container, and create a server
+			ScriptID: resScript.ID, // Startup script
+			Tag:      tag,          // ephemeral is used to autodelete the instance after some time
+		}
+
+		instance, err = v.client.Instance.Create(ctx, instanceOptions)
+		if err != nil {
+			continue
+		}
 	}
 
-	instance, err := v.client.Instance.Create(ctx, instanceOptions)
 	if err != nil {
 		return fmt.Errorf("unable to create instance: %w", err)
 	}
