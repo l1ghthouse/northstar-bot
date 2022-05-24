@@ -11,6 +11,9 @@ type Mod interface {
 }
 
 var ByName = map[string]func() Mod{
+	"pg9182_metrics": func() Mod {
+		return &PG9182Metrics{}
+	},
 	"rebalanced_lts_mod": func() Mod { return &RebalancedLTS{} },
 	"ctf_test_spawns":    func() Mod { return &TestCTFSpawns{} },
 	"holo_shift_mod": func() Mod {

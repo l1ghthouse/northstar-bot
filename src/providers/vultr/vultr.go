@@ -247,7 +247,7 @@ var vultrPlans = []string{"vc2-4c-8gb", "vhp-4c-8gb-intel", "vhp-4c-8gb-amd"}
 func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsserver.NSServer, regionID string, tag string) error {
 	// Create a base64 encoded script that will: Download northstar container, and Titanfall2 files from git, to startup the server
 
-	s, err := util.FormatStartupScript(ctx, server, "Competitive LTS!! Yay!", server.Insecure)
+	s, err := util.FormatStartupScript(ctx, server, "Northstar bot managed by https://github.com/l1ghthouse/northstar-bot", server.Insecure)
 	if err != nil {
 		return fmt.Errorf("failed to generate formatted script: %w", err)
 	}
