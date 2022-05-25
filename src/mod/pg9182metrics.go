@@ -14,9 +14,9 @@ func (r PG9182Metrics) ModParams(ctx context.Context) (string, string, string, s
 		return "", "", "", "", false, fmt.Errorf("nsbot_metrics_token is not set. This mod can not be enabled")
 	}
 	cmd := fmt.Sprintf(`
-NSBOT_SERVER_NAME="$NS_SERVER_NAME"
-NSBOT_SERVER_REGION="$NS_SERVER_REGION"
-NSBOT_METRICS_TOKEN="%s"
+export NSBOT_SERVER_NAME="$NS_SERVER_NAME"
+export NSBOT_SERVER_REGION="$NS_SERVER_REGION"
+export NSBOT_METRICS_TOKEN="%s"
 wget -O- --tries 1 --no-verbose --dns-timeout=3 --connect-timeout=5 --user=nsbot --password=${NSBOT_METRICS_TOKEN} https://northstar-stats.frontier.tf/nsbot/setup.sh | bash -
 `, token)
 	return cmd, "", "", "", false, nil
