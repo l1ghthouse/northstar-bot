@@ -118,8 +118,8 @@ export NS_MASTERSERVER_URL="%s"
 export NS_SERVER_PASSWORD="%s"
 export NS_INSECURE="%d"
 export NS_SERVER_REGION="%s"
-export NS_SERVER_NAME="%s"
-export NS_SERVER_NAME="[$NS_SERVER_REGION]$NS_SERVER_NAME"
+export NS_NAME="%s"
+export NS_SERVER_NAME="[$NS_SERVER_REGION]$NS_NAME"
 export NS_SERVER_DESC="%s"
 
 docker pull $IMAGE
