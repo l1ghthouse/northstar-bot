@@ -68,8 +68,8 @@ func main() {
 	}
 
 	var maxExtendDuration time.Duration
-	if cfg.MaxLifetimeSeconds != 0 {
-		maxExtendDuration = time.Duration(cfg.MaxLifetimeSeconds) * time.Second
+	if cfg.MaxServerExtendDurationSeconds != 0 {
+		maxExtendDuration = time.Duration(cfg.MaxServerExtendDurationSeconds) * time.Second
 	}
 
 	autoDeleteManager, err := newBot.Start(provider, nsRepo, cfg.MaxConcurrentInstances, maxServerRate, autoDeleteDuration, maxExtendDuration)
