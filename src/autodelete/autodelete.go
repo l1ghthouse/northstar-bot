@@ -44,15 +44,18 @@ func (d *Manager) AutoDelete() {
 			log.Println("error getting cached servers: ", err)
 			continue
 		}
-
 		for _, server := range servers {
-			if time.Since(server.CreatedAt) > d.maxLifetime {
-				for _, cached := range cachedServers {
-					if server.Name == cached.Name {
-						*server = *cached
-						break
-					}
+			for _, cached := range cachedServers {
+				if server.Name == cached.Name {
+					*server = *cached
+					break
 				}
+			}
+			maxLifetime := d.maxLifetime
+			if server.ExtendLifetime != nil {
+				maxLifetime = d.maxLifetime + *server.ExtendLifetime
+			}
+			if time.Since(server.CreatedAt) > maxLifetime {
 				d.deleteAndNotify(ctx, server)
 			}
 		}

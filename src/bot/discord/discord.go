@@ -29,7 +29,7 @@ type discordBot struct {
 	closeChannels []chan struct{}
 }
 
-func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, maxConcurrentServers, maxServersPerHour uint, autoDeleteDuration time.Duration) (*autodelete.Manager, error) {
+func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, maxConcurrentServers, maxServersPerHour uint, autoDeleteDuration time.Duration, maxExtendDuration time.Duration) (*autodelete.Manager, error) {
 	discordClient, err := discordgo.New("Bot " + d.config.DcBotToken)
 	if err != nil {
 		log.Fatal("Error creating Discord session: ", err)
@@ -52,6 +52,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 		autoDeleteDuration:   autoDeleteDuration,
 		nsRepo:               nsRepo,
 		maxServerCreateRate:  maxServersPerHour,
+		maxExtendDuration:    maxExtendDuration,
 		rateCounter:          counter,
 		createLock:           &sync.Mutex{},
 		notifyer:             n,
@@ -64,6 +65,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 	commandHandlers[ExtractLogs] = botHandler.handleExtractLogs
 	commandHandlers[RestartServer] = botHandler.handleRestartServer
 	commandHandlers[ServerMetadata] = botHandler.handleServerMetadata
+	commandHandlers[ExtendLifetime] = botHandler.handleServerExtendLifetime
 
 	discordClient.AddHandler(func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		if handlerFunc, ok := commandHandlers[interaction.ApplicationCommandData().Name]; ok {

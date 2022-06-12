@@ -7,12 +7,13 @@ import (
 )
 
 type Config struct {
-	Provider               providers.Config
-	Bot                    bot.Config
-	DB                     storage.Config
-	MaxConcurrentInstances uint `default:"1"`
-	MaxServersPerHour      int  `default:"-1"`
-	MaxLifetimeSeconds     uint `default:"6900"` // 2 hours - 5 minutes, since vultr charges hourly
+	Provider                       providers.Config
+	Bot                            bot.Config
+	DB                             storage.Config
+	MaxConcurrentInstances         uint `default:"1"`
+	MaxServerExtendDurationSeconds uint `default:"0"`
+	MaxServersPerHour              int  `default:"-1"`
+	MaxLifetimeSeconds             uint `default:"6900"` // 2 hours - 5 minutes, since vultr charges hourly
 }
 
 // MaxLifetimeSeconds could be optimized per cloud provider, depending on the billing cycle.

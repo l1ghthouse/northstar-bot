@@ -67,7 +67,12 @@ func main() {
 		maxServerRate = uint(cfg.MaxServersPerHour)
 	}
 
-	autoDeleteManager, err := newBot.Start(provider, nsRepo, cfg.MaxConcurrentInstances, maxServerRate, autoDeleteDuration)
+	var maxExtendDuration time.Duration
+	if cfg.MaxLifetimeSeconds != 0 {
+		maxExtendDuration = time.Duration(cfg.MaxLifetimeSeconds) * time.Second
+	}
+
+	autoDeleteManager, err := newBot.Start(provider, nsRepo, cfg.MaxConcurrentInstances, maxServerRate, autoDeleteDuration, maxExtendDuration)
 	if err != nil {
 		log.Fatal("Error starting the bot: ", err)
 	}

@@ -76,17 +76,12 @@ func (h *nsserverRepo) Store(ctx context.Context, server []*nsserver.NSServer) e
 	return nil
 }
 
-// Currently not used. Will likely be used to update server Extension time
-// func (h *nsserverRepo) Update(ctx context.Context, server *nsserver.NSServer) error {
-//	err := h.db.WithContext(ctx).Model(server).Updates(nsserver.NSServer{
-//		ID:        uuid.UUID{},
-//		Name:      "",
-//		Region:    "",
-//		Pin:       nil,
-//		CreatedAt: time.Time{},
-//	}).Error
-//	if err != nil {
-//		return err
-//	}
-//	return nil
-// }
+func (h *nsserverRepo) Update(ctx context.Context, server *nsserver.NSServer) error {
+	err := h.db.WithContext(ctx).Model(server).Updates(nsserver.NSServer{
+		ExtendLifetime: server.ExtendLifetime,
+	}).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}

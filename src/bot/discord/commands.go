@@ -57,6 +57,7 @@ const CreateServerOptMasterServer = "master_server"
 const CreateServerVersionOpt = "server_version"
 const CreateServerCustomDockerContainerOpt = "custom_container"
 const ListServerVerbosityOpt = "verbosity"
+const ExtendLifetime = "extend_lifetime"
 
 var (
 	commands = []*discordgo.ApplicationCommand{
@@ -153,6 +154,24 @@ var (
 				},
 			},
 		},
+		{
+			Name:        ExtendLifetime,
+			Description: "Extends lifetime of the server by a given amount",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "name",
+					Description: "server name associated with metadata",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "duration",
+					Description: "Duration by which the server lifetime would be extended",
+					Required:    true,
+				},
+			},
+		},
 	}
 )
 
@@ -161,6 +180,7 @@ type handler struct {
 	maxConcurrentServers uint
 	autoDeleteDuration   time.Duration
 	nsRepo               nsserver.Repo
+	maxExtendDuration    time.Duration
 	maxServerCreateRate  uint
 	rateCounter          *ratecounter.RateCounter
 	createLock           *sync.Mutex
@@ -461,6 +481,51 @@ func (h *handler) handleRestartServer(session *discordgo.Session, interaction *d
 	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("restarted server %s", serverName))
 }
 
+func (h *handler) handleServerExtendLifetime(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+	sendInteractionDeferred(session, interaction)
+	ctx := context.Background()
+	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
+	extend, err := time.ParseDuration(interaction.ApplicationCommandData().Options[1].StringValue())
+	if err != nil {
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to parse duration. error: %v", err))
+
+		return
+	}
+
+	if extend <= 0 {
+		editDeferredInteractionReply(session, interaction.Interaction, "duration should not be negative, or 0")
+
+		return
+	}
+
+	server, err := h.nsRepo.GetByName(ctx, serverName)
+	if err != nil {
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+
+		return
+	}
+
+	if server.ExtendLifetime != nil {
+		extend += *server.ExtendLifetime
+	}
+
+	if extend > h.maxExtendDuration {
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("extended lifetime exceeded maximum allowed extended duration. Extended duration: %s, Max extended duration: %s", extend.String(), h.maxExtendDuration.String()))
+
+		return
+	}
+
+	server.ExtendLifetime = &extend
+	err = h.nsRepo.Update(ctx, server)
+	if err != nil {
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("Failed to update ExtendLifetime field in database, error: %v", err))
+
+		return
+	}
+
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("server lifetime successfully updated to: %s", server.ExtendLifetime))
+}
+
 func (h *handler) handleServerMetadata(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
@@ -578,7 +643,11 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 			builder.WriteString(fmt.Sprintf("Options: \n```\n%s```\n", options))
 		}
 		if h.autoDeleteDuration > time.Duration(0) {
-			builder.WriteString(fmt.Sprintf("Time until deleted: %s", (h.autoDeleteDuration - time.Since(server.CreatedAt)).String()))
+			autoDelete := h.autoDeleteDuration
+			if server.ExtendLifetime != nil {
+				autoDelete += *server.ExtendLifetime
+			}
+			builder.WriteString(fmt.Sprintf("Time until deleted: %s", (autoDelete - time.Since(server.CreatedAt)).String()))
 		}
 		builder.WriteString("\n\n")
 		servers[idx] = builder.String()

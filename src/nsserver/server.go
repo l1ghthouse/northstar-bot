@@ -22,6 +22,7 @@ type NSServer struct {
 	AuthTCPPort        int               `json:"authTCPPort" gorm:"not null;default:0"`
 	MasterServer       string            `json:"masterServer" gorm:"not null;default:null"`
 	ServerVersion      string            `json:"serverVersion" gorm:"not null;default:null"`
+	ExtendLifetime     *time.Duration    `json:"extendLifetime" gorm:"default:null"`
 	DockerImageVersion string            `json:"dockerImageVersion" gorm:"not null;default:null"`
 	Options            datatypes.JSONMap `json:"options" gorm:""`
 	CreatedAt          time.Time

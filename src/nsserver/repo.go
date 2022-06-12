@@ -13,5 +13,5 @@ type Repo interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*NSServer, error)
 	GetByName(ctx context.Context, name string) (*NSServer, error)
 	Store(ctx context.Context, u []*NSServer) error
-	// Update(ctx context.Context, u *NSServer) error
+	Update(ctx context.Context, u *NSServer) error
 }
