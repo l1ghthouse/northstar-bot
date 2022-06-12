@@ -53,7 +53,7 @@ func (d *Manager) AutoDelete() {
 			}
 			maxLifetime := d.maxLifetime
 			if server.ExtendLifetime != nil {
-				maxLifetime = d.maxLifetime + *server.ExtendLifetime
+				maxLifetime += *server.ExtendLifetime
 			}
 			if time.Since(server.CreatedAt) > maxLifetime {
 				d.deleteAndNotify(ctx, server)

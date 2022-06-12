@@ -586,6 +586,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 				server.Pin = cached.Pin
 				server.RequestedBy = cached.RequestedBy
 				server.Options = cached.Options
+				server.ExtendLifetime = cached.ExtendLifetime
 				break
 			}
 		}
