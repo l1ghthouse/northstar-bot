@@ -56,6 +56,7 @@ const CreateServerOptInsecure = "insecure"
 const CreateServerOptMasterServer = "master_server"
 const CreateServerVersionOpt = "server_version"
 const CreateServerCustomDockerContainerOpt = "custom_container"
+const CreateServerCustomThunderstoreMods = "custom_thunderstore_mods"
 const ListServerVerbosityOpt = "verbosity"
 const ExtendLifetime = "extend_lifetime"
 
@@ -91,6 +92,11 @@ var (
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        CreateServerCustomDockerContainerOpt,
 					Description: "The Custom Docker Container must be under ghcr.io/pg9182/. Format: NAME:TAG",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        CreateServerCustomThunderstoreMods,
+					Description: "Comma separated list of custom thunderstore mods for server to install",
 				},
 			}, modApplicationCommand()...),
 		},
@@ -209,6 +215,16 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsse
 				modOptions[modName] = val.BoolValue()
 			}
 		}
+		thunderstoreMods := ""
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerCustomThunderstoreMods)
+		if ok {
+			thunderstoreMods = val.StringValue()
+		}
+
+		for _, m := range strings.Split(thunderstoreMods, ",") {
+			modName := strings.TrimSpace(m)
+			modOptions[modName] = true
+		}
 	}
 
 	var isInsecure bool
@@ -267,7 +283,7 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsse
 		RequestedBy:        interaction.Member.User.ID,
 		Name:               name,
 		Pin:                pin,
-		Options:            modOptions,
+		ModOptions:         modOptions,
 		Insecure:           isInsecure,
 		ServerVersion:      serverVersion,
 		GameUDPPort:        37015,
@@ -359,20 +375,18 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	modInfo := ""
 	modInfoMisc := ""
 
-	for option := range server.Options {
-		for modName := range mod.ByName {
-			if option == modName && server.Options[option].(bool) {
-				if modInfo == "" {
-					modInfo = "Following Mods Are Enabled:\n"
-				}
-				modInfo += fmt.Sprintf(" - %s(version: %s)\n", modName, server.Options[modName+util.VersionPostfix])
+	for modName := range server.ModOptions {
+		if server.ModOptions[modName].(bool) {
+			if modInfo == "" {
+				modInfo = "Following Mods Are Enabled:\n"
+			}
+			modInfo += fmt.Sprintf(" - %s(version: %s)\n", modName, server.ModOptions[modName+util.VersionPostfix])
 
-				if server.Options[modName+util.RequiredByClientPostfix] == true {
-					if modInfoMisc == "" {
-						modInfoMisc = "Following mods are **REQUIRED TO BE DOWNLOADED BY CLIENT**:\n"
-					}
-					modInfoMisc += fmt.Sprintf(" - %s: <%s>\n", modName, server.Options[modName+util.LinkPostfix])
+			if server.ModOptions[modName+util.RequiredByClientPostfix] == true {
+				if modInfoMisc == "" {
+					modInfoMisc = "Following mods are **REQUIRED TO BE DOWNLOADED BY CLIENT**:\n"
 				}
+				modInfoMisc += fmt.Sprintf(" - %s: <%s>\n", modName, server.ModOptions[modName+util.LinkPostfix])
 			}
 		}
 	}
@@ -585,7 +599,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 			if server.Name == cached.Name {
 				server.Pin = cached.Pin
 				server.RequestedBy = cached.RequestedBy
-				server.Options = cached.Options
+				server.ModOptions = cached.ModOptions
 				server.ExtendLifetime = cached.ExtendLifetime
 				break
 			}
@@ -609,8 +623,8 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 			user = server.RequestedBy
 		}
 		options := ""
-		if server.Options != nil {
-			j, err := server.Options.MarshalJSON()
+		if server.ModOptions != nil {
+			j, err := server.ModOptions.MarshalJSON()
 			if err != nil {
 				options = fmt.Sprintf("failed to parse servers options. error: %v", err)
 			} else {

@@ -18,60 +18,53 @@ var ByName = map[string]func() Mod{
 	"ctf_test_spawns":    func() Mod { return &TestCTFSpawns{} },
 	"holo_shift_mod": func() Mod {
 		return &ThunderstoreMod{
-			enabledByDefault: false,
-			name:             "HoloShift",
-			requiredByClient: false,
+			Enabled: false,
+			Name:    "HoloShift",
 		}
 	},
 	"parseable_logs": func() Mod {
 		return &ThunderstoreMod{
-			enabledByDefault: true,
-			name:             "ParseableLogs",
-			requiredByClient: false,
+			Enabled: true,
+			Name:    "ParseableLogs",
 		}
 	},
 	"ramp_water": func() Mod {
 		return &ThunderstoreMod{
-			enabledByDefault: false,
-			name:             "RampWater",
-			requiredByClient: false,
+			Enabled: false,
+			Name:    "RampWater",
 		}
 	},
 	"better_homestead": func() Mod {
 		return &ThunderstoreMod{
-			enabledByDefault: false,
-			name:             "BetterHomestead",
-			requiredByClient: false,
+			Enabled: false,
+			Name:    "BetterHomestead",
 		}
 	},
 	"better_rise": func() Mod {
 		return &ThunderstoreMod{
-			enabledByDefault: false,
-			name:             "BetterRise",
-			requiredByClient: false,
+			Enabled: false,
+			Name:    "BetterRise",
 		}
 	},
 	"archon": func() Mod {
 		return &ThunderstoreMod{
-			enabledByDefault: false,
-			name:             "MoblinArchon",
-			requiredByClient: true,
+			Enabled: false,
+			Name:    "MoblinArchon",
 		}
 	},
 }
 
 type ThunderstoreMod struct {
-	enabledByDefault bool
-	name             string
-	requiredByClient bool
+	Enabled bool
+	Name    string
 }
 
 func (h ThunderstoreMod) ModParams(ctx context.Context) (string, string, string, string, bool, error) {
-	return latestThunderstoreMod(ctx, h.name, h.requiredByClient)
+	return latestThunderstoreMod(ctx, h.Name)
 }
 
 func (h ThunderstoreMod) EnabledByDefault() bool {
-	return h.enabledByDefault
+	return h.Enabled
 }
 
 var ErrNoTagsFound = fmt.Errorf("no tags found")

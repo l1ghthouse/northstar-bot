@@ -49,7 +49,7 @@ func dockerArgBuilder(modPath string, modName string) string {
 	return fmt.Sprintf("--mount \"type=bind,source=%s,target=/mnt/mods/%s,readonly\"", modPath, modName)
 }
 
-func latestThunderstoreMod(ctx context.Context, packageName string, requiredByClient bool) (string, string, string, string, bool, error) {
+func latestThunderstoreMod(ctx context.Context, packageName string) (string, string, string, string, bool, error) {
 	pkg, err := thunderstore.GetPackageByName(ctx, packageName)
 	if err != nil {
 		return "", "", "", "", false, fmt.Errorf("failed to get package: %w", err)
@@ -64,6 +64,14 @@ func latestThunderstoreMod(ctx context.Context, packageName string, requiredByCl
 	builder.WriteString(cmdUnzipBuilderWithDst(packageName))
 
 	modFullName := pkg.Owner + "." + packageName
+
+	requiredByClient := false
+
+	for _, category := range pkg.Categories {
+		if strings.Contains(category, "Client-side") {
+			requiredByClient = true
+		}
+	}
 
 	return builder.String(), dockerArgBuilder(fmt.Sprintf("/%s/mods/%s", packageName, modFullName), modFullName), latestVersion.DownloadURL, latestVersion.VersionNumber, requiredByClient, nil
 }

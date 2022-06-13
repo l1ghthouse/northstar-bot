@@ -95,20 +95,33 @@ func Btoi(b bool) int {
 func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverDesc string, insecure bool) (string, error) {
 	OptionalCmd := ""
 	DockerArgs := ""
-	for serverOptions, v := range server.Options {
+	for option, enabled := range server.ModOptions {
+		knownMod := false
+		var m mod.Mod
 		for modName, generator := range mod.ByName {
-			if serverOptions == modName && v.(bool) {
-				m := generator()
-				cmd, args, link, tag, requiredByClient, err := m.ModParams(ctx)
-				if err != nil {
-					return "", fmt.Errorf("error generating mod: %w", err)
+			if option == modName {
+				knownMod = true
+				if enabled.(bool) {
+					m = generator()
 				}
-				OptionalCmd = OptionalCmd + "\n" + cmd
-				DockerArgs = DockerArgs + " " + args + " "
-				server.Options[serverOptions+VersionPostfix] = tag
-				server.Options[serverOptions+LinkPostfix] = link
-				server.Options[serverOptions+RequiredByClientPostfix] = requiredByClient
 			}
+		}
+		if !knownMod {
+			m = mod.ThunderstoreMod{
+				Enabled: false,
+				Name:    option,
+			}
+		}
+		if m != nil {
+			cmd, args, link, tag, requiredByClient, err := m.ModParams(ctx)
+			if err != nil {
+				return "", fmt.Errorf("error generating mod: %w", err)
+			}
+			OptionalCmd = OptionalCmd + "\n" + cmd
+			DockerArgs = DockerArgs + " " + args + " "
+			server.ModOptions[option+VersionPostfix] = tag
+			server.ModOptions[option+LinkPostfix] = link
+			server.ModOptions[option+RequiredByClientPostfix] = requiredByClient
 		}
 	}
 
