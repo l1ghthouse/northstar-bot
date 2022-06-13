@@ -223,7 +223,9 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsse
 
 		for _, m := range strings.Split(thunderstoreMods, ",") {
 			modName := strings.TrimSpace(m)
-			modOptions[modName] = true
+			if modName != "" {
+				modOptions[modName] = true
+			}
 		}
 	}
 
