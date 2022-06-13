@@ -74,7 +74,7 @@ func GetPackages(ctx context.Context) ([]Package, error) {
 	return packages, nil
 }
 
-var ErrNoSuchPackage = fmt.Errorf("no such package")
+var ErrNoSuchPackage = fmt.Errorf("no such thunderstore package")
 
 func GetPackageByName(ctx context.Context, name string) (Package, error) {
 	packages, err := GetPackages(ctx)
@@ -86,7 +86,7 @@ func GetPackageByName(ctx context.Context, name string) (Package, error) {
 			return pkg, nil
 		}
 	}
-	return Package{}, ErrNoSuchPackage
+	return Package{}, fmt.Errorf("%s: %s", ErrNoSuchPackage, name)
 }
 
 var ErrNoVersionsDetected = fmt.Errorf("no versions detected")
