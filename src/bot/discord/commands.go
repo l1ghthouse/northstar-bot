@@ -376,7 +376,8 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	modInfoMisc := ""
 
 	for modName := range server.ModOptions {
-		if server.ModOptions[modName].(bool) {
+		enabled, ok := server.ModOptions[modName].(bool)
+		if ok && enabled {
 			if modInfo == "" {
 				modInfo = "Following Mods Are Enabled:\n"
 			}
