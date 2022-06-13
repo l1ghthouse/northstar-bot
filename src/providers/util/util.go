@@ -95,13 +95,14 @@ func Btoi(b bool) int {
 func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverDesc string, insecure bool) (string, error) {
 	OptionalCmd := ""
 	DockerArgs := ""
-	for option, enabled := range server.ModOptions {
+	var mergeOptions = make(map[string]interface{})
+	for option, value := range server.ModOptions {
 		knownMod := false
 		var m mod.Mod
 		for modName, generator := range mod.ByName {
 			if option == modName {
 				knownMod = true
-				if enabled.(bool) {
+				if value.(bool) {
 					m = generator()
 				}
 			}
@@ -119,10 +120,14 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 			}
 			OptionalCmd = OptionalCmd + "\n" + cmd
 			DockerArgs = DockerArgs + " " + args + " "
-			server.ModOptions[option+VersionPostfix] = tag
-			server.ModOptions[option+LinkPostfix] = link
-			server.ModOptions[option+RequiredByClientPostfix] = requiredByClient
+			mergeOptions[option+VersionPostfix] = tag
+			mergeOptions[option+LinkPostfix] = link
+			mergeOptions[option+RequiredByClientPostfix] = requiredByClient
 		}
+	}
+
+	for k, v := range mergeOptions {
+		server.ModOptions[k] = v
 	}
 
 	serverFiles := optimizedServerFiles

@@ -86,7 +86,7 @@ func GetPackageByName(ctx context.Context, name string) (Package, error) {
 			return pkg, nil
 		}
 	}
-	return Package{}, fmt.Errorf("%s: %s", ErrNoSuchPackage, name)
+	return Package{}, fmt.Errorf("%w: %s", ErrNoSuchPackage, name)
 }
 
 var ErrNoVersionsDetected = fmt.Errorf("no versions detected")
