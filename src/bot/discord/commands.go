@@ -205,6 +205,16 @@ func optionValue(options []*discordgo.ApplicationCommandInteractionDataOption, n
 	return nil, false
 }
 
+func extractCustomMods(interaction *discordgo.InteractionCreate) string {
+	thunderstoreMods := ""
+	val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerCustomThunderstoreMods)
+	if ok {
+		thunderstoreMods = val.StringValue()
+	}
+
+	return thunderstoreMods
+}
+
 func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsserver.NSServer, error) {
 	var modOptions = make(map[string]interface{})
 	{
@@ -215,11 +225,7 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsse
 				modOptions[modName] = val.BoolValue()
 			}
 		}
-		thunderstoreMods := ""
-		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerCustomThunderstoreMods)
-		if ok {
-			thunderstoreMods = val.StringValue()
-		}
+		thunderstoreMods := extractCustomMods(interaction)
 
 		for _, m := range strings.Split(thunderstoreMods, ",") {
 			modName := strings.TrimSpace(m)
@@ -378,18 +384,22 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	modInfoMisc := ""
 
 	for modName := range server.ModOptions {
-		enabled, ok := server.ModOptions[modName].(bool)
-		if ok && enabled {
-			if modInfo == "" {
-				modInfo = "Following Mods Are Enabled:\n"
-			}
-			modInfo += fmt.Sprintf(" - %s(version: %s)\n", modName, server.ModOptions[modName+util.VersionPostfix])
-
-			if server.ModOptions[modName+util.RequiredByClientPostfix] == true {
-				if modInfoMisc == "" {
-					modInfoMisc = "Following mods are **REQUIRED TO BE DOWNLOADED BY CLIENT**:\n"
+		_, knownMod := mod.ByName[modName]
+		thunderstoreMods := extractCustomMods(interaction)
+		if knownMod || strings.Contains(thunderstoreMods, modName) {
+			enabled, ok := server.ModOptions[modName].(bool)
+			if ok && enabled {
+				if modInfo == "" {
+					modInfo = "Following Mods Are Enabled:\n"
 				}
-				modInfoMisc += fmt.Sprintf(" - %s: <%s>\n", modName, server.ModOptions[modName+util.LinkPostfix])
+				modInfo += fmt.Sprintf(" - %s(version: %s)\n", modName, server.ModOptions[modName+util.VersionPostfix])
+
+				if server.ModOptions[modName+util.RequiredByClientPostfix] == true {
+					if modInfoMisc == "" {
+						modInfoMisc = "Following mods are **REQUIRED TO BE DOWNLOADED BY CLIENT**:\n"
+					}
+					modInfoMisc += fmt.Sprintf(" - %s: <%s>\n", modName, server.ModOptions[modName+util.LinkPostfix])
+				}
 			}
 		}
 	}
