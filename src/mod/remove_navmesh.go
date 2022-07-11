@@ -12,7 +12,7 @@ func (r RemoveNavmesh) ModParams(ctx context.Context) (string, string, string, s
 	fileContainerOrigin := "/usr/lib/northstar/R2Northstar/mods/"
 	folders := []string{
 		"Northstar.CustomServers/mod/maps/graphs",
-		"R2Northstar/mods/Northstar.CustomServers/mod/maps/navmesh",
+		"Northstar.CustomServers/mod/maps/navmesh",
 	}
 
 	emptyDir := "/empty_dir"
