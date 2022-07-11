@@ -16,6 +16,7 @@ var ByName = map[string]func() Mod{
 	},
 	"rebalanced_lts_mod": func() Mod { return &RebalancedLTS{} },
 	"ctf_test_spawns":    func() Mod { return &TestCTFSpawns{} },
+	"remove_navmesh":     func() Mod { return &RemoveNavmesh{} },
 	"holo_shift_mod": func() Mod {
 		return &ThunderstoreMod{
 			Enabled: false,
