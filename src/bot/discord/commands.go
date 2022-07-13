@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -190,6 +191,7 @@ type handler struct {
 	maxServerCreateRate  uint
 	rateCounter          *ratecounter.RateCounter
 	createLock           *sync.Mutex
+	commandOverrides     []CommandOverrides
 	notifyer             *Notifyer
 }
 
@@ -215,7 +217,29 @@ func extractCustomMods(interaction *discordgo.InteractionCreate) string {
 	return thunderstoreMods
 }
 
-func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsserver.NSServer, error) {
+func (h *handler) getGlobalOverrideBoolValue(command, flag string) (bool, bool) {
+	for _, commandOverride := range h.commandOverrides {
+		if command == commandOverride.Command && flag == commandOverride.Flag {
+			value, err := strconv.ParseBool(commandOverride.Value)
+			if err != nil {
+				log.Println(fmt.Sprintf("Unable to interpret global command overwrite as bool: %v", commandOverride.Value))
+			}
+			return value, true
+		}
+	}
+	return false, false
+}
+
+func (h *handler) getGlobalOverrideStringValue(command, flag string) (string, bool) {
+	for _, commandOverride := range h.commandOverrides {
+		if command == commandOverride.Command && flag == commandOverride.Flag {
+			return commandOverride.Value, true
+		}
+	}
+	return "", false
+}
+
+func (h *handler) defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsserver.NSServer, error) {
 	var modOptions = make(map[string]interface{})
 	{
 		for modName := range mod.ByName {
@@ -223,6 +247,13 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsse
 			val, ok := optionValue(interaction.ApplicationCommandData().Options, modName)
 			if ok {
 				modOptions[modName] = val.BoolValue()
+			} else {
+				val, ok := h.getGlobalOverrideBoolValue(interaction.ApplicationCommandData().Name, modName)
+				if ok {
+					modOptions[modName] = val
+				} else {
+					modOptions[modName] = false
+				}
 			}
 		}
 		thunderstoreMods := extractCustomMods(interaction)
@@ -241,7 +272,12 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsse
 		if ok {
 			isInsecure = val.BoolValue()
 		} else {
-			isInsecure = false
+			val, ok := h.getGlobalOverrideBoolValue(interaction.ApplicationCommandData().Name, CreateServerOptInsecure)
+			if ok {
+				isInsecure = val
+			} else {
+				isInsecure = false
+			}
 		}
 	}
 
@@ -251,7 +287,12 @@ func defaultServer(name string, interaction *discordgo.InteractionCreate) (*nsse
 		if ok {
 			masterServer = val.StringValue()
 		} else {
-			masterServer = DefaultMasterServer
+			val, ok := h.getGlobalOverrideStringValue(interaction.ApplicationCommandData().Name, CreateServerOptInsecure)
+			if ok {
+				masterServer = val
+			} else {
+				masterServer = DefaultMasterServer
+			}
 		}
 	}
 
@@ -340,7 +381,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		return
 	}
 
-	server, err := defaultServer(name, interaction)
+	server, err := h.defaultServer(name, interaction)
 	if err != nil {
 		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to create server: %v", err))
 	}
@@ -603,7 +644,12 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		if ok {
 			verbose = val.BoolValue()
 		} else {
-			verbose = false
+			val, ok := h.getGlobalOverrideBoolValue(interaction.ApplicationCommandData().Name, ListServerVerbosityOpt)
+			if ok {
+				verbose = val
+			} else {
+				verbose = false
+			}
 		}
 	}
 

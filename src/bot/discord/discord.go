@@ -20,6 +20,13 @@ type Config struct {
 	DcBotToken       string `required:"true"`
 	DcGuildID        string `required:"true"`
 	BotReportChannel string ``
+	CommandDefaults  []CommandOverrides
+}
+
+type CommandOverrides struct {
+	Command string `required:"true"`
+	Flag    string `required:"true"`
+	Value   string `required:"true"`
 }
 
 type discordBot struct {
@@ -55,6 +62,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 		maxExtendDuration:    maxExtendDuration,
 		rateCounter:          counter,
 		createLock:           &sync.Mutex{},
+		commandOverrides:     d.config.CommandDefaults,
 		notifyer:             n,
 	}
 
