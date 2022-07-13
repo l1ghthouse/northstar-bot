@@ -62,7 +62,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 		maxExtendDuration:    maxExtendDuration,
 		rateCounter:          counter,
 		createLock:           &sync.Mutex{},
-		commandOverrides:     d.config.CommandDefaults,
+		CommandOverrides:     d.config.CommandDefaults,
 		notifyer:             n,
 	}
 
@@ -74,6 +74,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 	commandHandlers[RestartServer] = botHandler.handleRestartServer
 	commandHandlers[ServerMetadata] = botHandler.handleServerMetadata
 	commandHandlers[ExtendLifetime] = botHandler.handleServerExtendLifetime
+	commandHandlers[CommandFlagOverrides] = botHandler.handleCommandFlagOverrides
 
 	discordClient.AddHandler(func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		if handlerFunc, ok := commandHandlers[interaction.ApplicationCommandData().Name]; ok {

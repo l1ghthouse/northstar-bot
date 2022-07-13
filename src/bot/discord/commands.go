@@ -24,12 +24,13 @@ import (
 )
 
 const (
-	CreateServer   = "create_server"
-	ListServer     = "list_servers"
-	DeleteServer   = "delete_server"
-	ExtractLogs    = "extract_logs"
-	RestartServer  = "restart_server"
-	ServerMetadata = "server_metadata"
+	CreateServer         = "create_server"
+	ListServer           = "list_servers"
+	DeleteServer         = "delete_server"
+	ExtractLogs          = "extract_logs"
+	RestartServer        = "restart_server"
+	ServerMetadata       = "server_metadata"
+	CommandFlagOverrides = "list_command_flag_overrides"
 )
 
 func modApplicationCommand() (options []*discordgo.ApplicationCommandOption) {
@@ -138,6 +139,10 @@ var (
 			},
 		},
 		{
+			Name:        CommandFlagOverrides,
+			Description: "Command flag overrides for current discord server",
+		},
+		{
 			Name:        ListServer,
 			Description: "Command to list servers",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -191,7 +196,7 @@ type handler struct {
 	maxServerCreateRate  uint
 	rateCounter          *ratecounter.RateCounter
 	createLock           *sync.Mutex
-	commandOverrides     []CommandOverrides
+	CommandOverrides     []CommandOverrides
 	notifyer             *Notifyer
 }
 
@@ -218,7 +223,7 @@ func extractCustomMods(interaction *discordgo.InteractionCreate) string {
 }
 
 func (h *handler) getGlobalOverrideBoolValue(command, flag string) (bool, bool) {
-	for _, commandOverride := range h.commandOverrides {
+	for _, commandOverride := range h.CommandOverrides {
 		if command == commandOverride.Command && flag == commandOverride.Flag {
 			value, err := strconv.ParseBool(commandOverride.Value)
 			if err != nil {
@@ -231,7 +236,7 @@ func (h *handler) getGlobalOverrideBoolValue(command, flag string) (bool, bool) 
 }
 
 func (h *handler) getGlobalOverrideStringValue(command, flag string) (string, bool) {
-	for _, commandOverride := range h.commandOverrides {
+	for _, commandOverride := range h.CommandOverrides {
 		if command == commandOverride.Command && flag == commandOverride.Flag {
 			return commandOverride.Value, true
 		}
@@ -484,6 +489,16 @@ func generateUniqueName(servers []*nsserver.NSServer, cachedServers []*nsserver.
 		return "", ErrUnableToGenerateUniqueName
 	}
 	return name, nil
+}
+
+func (h *handler) handleCommandFlagOverrides(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+	sendInteractionDeferred(session, interaction)
+	b, err := json.Marshal(h.CommandOverrides)
+	if err != nil {
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to marshal command flag overrides: %v", err))
+		return
+	}
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("```%s```", string(b)))
 }
 
 func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
