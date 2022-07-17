@@ -389,6 +389,8 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	server, err := h.defaultServer(name, interaction)
 	if err != nil {
 		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to create server: %v", err))
+
+		return
 	}
 
 	err = h.p.CreateServer(ctx, server)
