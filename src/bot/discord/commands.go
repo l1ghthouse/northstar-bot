@@ -256,8 +256,6 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 				val, ok := h.getGlobalOverrideBoolValue(interaction.ApplicationCommandData().Name, modName)
 				if ok {
 					modOptions[modName] = val
-				} else {
-					modOptions[modName] = false
 				}
 			}
 		}
