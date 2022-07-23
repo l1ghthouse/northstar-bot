@@ -25,6 +25,7 @@ type NSServer struct {
 	ExtendLifetime     *time.Duration    `json:"extendLifetime" gorm:"default:null"`
 	DockerImageVersion string            `json:"dockerImageVersion" gorm:"not null;default:null"`
 	ModOptions         datatypes.JSONMap `json:"options" gorm:""`
+	TickRate           uint64            `json:"tick_rate" gorm:""`
 	CreatedAt          time.Time
 }
 

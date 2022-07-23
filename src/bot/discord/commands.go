@@ -59,6 +59,7 @@ const CreateServerOptMasterServer = "master_server"
 const CreateServerVersionOpt = "server_version"
 const CreateServerCustomDockerContainerOpt = "custom_container"
 const CreateServerCustomThunderstoreMods = "custom_thunderstore_mods"
+const CreateServerTickRate = "tick_rate"
 const ListServerVerbosityOpt = "verbosity"
 const ExtendLifetime = "extend_lifetime"
 
@@ -99,6 +100,11 @@ var (
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        CreateServerCustomThunderstoreMods,
 					Description: "Comma separated list of custom thunderstore mods for server to install",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        CreateServerTickRate,
+					Description: "Custom TickRate to use for the server",
 				},
 			}, modApplicationCommand()...),
 		},
@@ -269,6 +275,18 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 		}
 	}
 
+	var tickRate uint64
+	{
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerTickRate)
+		if ok {
+			tickRate = val.UintValue()
+		}
+	}
+
+	if tickRate != 0 && (tickRate < 20 || tickRate > 120) {
+		return nil, fmt.Errorf("tick_rate must be between 20, and 120. Following value is not supported: %d", tickRate)
+	}
+
 	var isInsecure bool
 	{
 		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerOptInsecure)
@@ -340,6 +358,7 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 		ServerVersion:      serverVersion,
 		GameUDPPort:        37015,
 		AuthTCPPort:        8081,
+		TickRate:           tickRate,
 		DockerImageVersion: dockerImageVersion,
 		MasterServer:       masterServer,
 	}, nil
@@ -456,6 +475,13 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		if modInfoMisc != "" {
 			note.WriteString(modInfoMisc)
 		}
+	}
+
+	if server.TickRate != 0 {
+		note.WriteString("\n")
+		note.WriteString("Custom tick_rate value supplied.\n**Make sure clients have the following console variables:**")
+		note.WriteString("\n")
+		note.WriteString(fmt.Sprintf("cl_updaterate_mp %d", server.TickRate))
 	}
 
 	editDeferredInteractionReply(session, interaction.Interaction, note.String())
