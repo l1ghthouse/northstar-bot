@@ -133,7 +133,7 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 	var extraArgs string
 
 	if server.TickRate != 0 {
-		extraArgs += fmt.Sprintf("+cl_updaterate_mp %d +sv_updaterate_mp %d +cl_cmdrate %d +sv_minupdaterate %d +maxupdaterate %d +sv_max_snapshots_multiplayer %d +base_tickinterval_mp %.5f",
+		extraArgs += fmt.Sprintf("+cl_updaterate_mp %d +sv_updaterate_mp %d +cl_cmdrate %d +sv_minupdaterate %d +sv_maxupdaterate %d +sv_max_snapshots_multiplayer %d +base_tickinterval_mp %.5f",
 			server.TickRate, server.TickRate, server.TickRate, server.TickRate, server.TickRate, server.TickRate*15, 1/float64(server.TickRate))
 	}
 
