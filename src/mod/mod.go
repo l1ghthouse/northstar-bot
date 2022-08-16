@@ -14,9 +14,10 @@ var ByName = map[string]func() Mod{
 	"pg9182_metrics": func() Mod {
 		return &PG9182Metrics{}
 	},
-	"rebalanced_lts_mod": func() Mod { return &RebalancedLTS{} },
-	"ctf_test_spawns":    func() Mod { return &TestCTFSpawns{} },
-	"remove_navmesh":     func() Mod { return &RemoveNavmesh{} },
+	"rebalanced_lts_mod":      func() Mod { return &RebalancedLTS{preRelease: false} },
+	"rebalanced_lts_mod_test": func() Mod { return &RebalancedLTS{preRelease: true} },
+	"ctf_test_spawns":         func() Mod { return &TestCTFSpawns{} },
+	"remove_navmesh":          func() Mod { return &RemoveNavmesh{} },
 	"holo_shift_mod": func() Mod {
 		return &ThunderstoreMod{
 			Enabled: false,

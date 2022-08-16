@@ -6,7 +6,9 @@ import (
 	"strings"
 )
 
-type RebalancedLTS struct{}
+type RebalancedLTS struct {
+	preRelease bool
+}
 
 const LTSRebalancedRepoOwner = "Dinorush"
 const LTSRebalancedRepoName = "LTSRebalance"
@@ -14,7 +16,7 @@ const LTSRebalancedModName = LTSRebalancedRepoOwner + "." + LTSRebalancedRepoNam
 const LTSRebalancedModNameKVFix = LTSRebalancedModName + "_KVFix"
 
 func (r RebalancedLTS) ModParams(ctx context.Context) (string, string, string, string, bool, error) {
-	latestTag, err := latestGithubTag(ctx, LTSRebalancedRepoOwner, LTSRebalancedRepoName)
+	latestTag, err := latestGithubReleaseTag(ctx, LTSRebalancedRepoOwner, LTSRebalancedRepoName, r.preRelease)
 	if err != nil {
 		return "", "", "", "", false, err
 	}
