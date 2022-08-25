@@ -24,7 +24,7 @@ func (r RebalancedLTS) ModParams(ctx context.Context) (string, string, string, s
 	builder := strings.Builder{}
 	builder.WriteString(cmdWgetZipBuilder(link, LTSRebalancedModName))
 	builder.WriteString(cmdUnzipBuilderWithDst(LTSRebalancedModName))
-	builder.WriteString(fmt.Sprintf("cp /%s/* /mods/", LTSRebalancedModName))
+	builder.WriteString(fmt.Sprintf("cp -r /%s/* /mods/", LTSRebalancedModName))
 	builder.WriteString("\n")
 	return builder.String(), "", link, latestTag, true, nil
 }
