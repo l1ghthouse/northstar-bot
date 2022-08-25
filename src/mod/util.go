@@ -48,10 +48,6 @@ func cmdUnzipBuilderWithDst(zipName string) string {
 	return builder.String()
 }
 
-func dockerArgBuilder(modPath string, modName string) string {
-	return fmt.Sprintf("--mount \"type=bind,source=%s,target=/mnt/mods/%s,readonly\"", modPath, modName)
-}
-
 func latestThunderstoreMod(ctx context.Context, packageName string) (string, string, string, string, bool, error) {
 	pkg, err := thunderstore.GetPackageByName(ctx, packageName)
 	if err != nil {
@@ -65,8 +61,8 @@ func latestThunderstoreMod(ctx context.Context, packageName string) (string, str
 	builder := strings.Builder{}
 	builder.WriteString(cmdWgetZipBuilder(latestVersion.DownloadURL, packageName))
 	builder.WriteString(cmdUnzipBuilderWithDst(packageName))
-
-	modFullName := pkg.Owner + "." + packageName
+	builder.WriteString(fmt.Sprintf("cp /%s/mods/* /mods/", packageName))
+	builder.WriteString("\n")
 
 	requiredByClient := false
 
@@ -76,5 +72,5 @@ func latestThunderstoreMod(ctx context.Context, packageName string) (string, str
 		}
 	}
 
-	return builder.String(), dockerArgBuilder(fmt.Sprintf("/%s/mods/%s", packageName, modFullName), modFullName), latestVersion.DownloadURL, latestVersion.VersionNumber, requiredByClient, nil
+	return builder.String(), "", latestVersion.DownloadURL, latestVersion.VersionNumber, requiredByClient, nil
 }

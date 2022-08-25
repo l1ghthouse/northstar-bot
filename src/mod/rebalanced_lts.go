@@ -24,9 +24,9 @@ func (r RebalancedLTS) ModParams(ctx context.Context) (string, string, string, s
 	builder := strings.Builder{}
 	builder.WriteString(cmdWgetZipBuilder(link, LTSRebalancedModName))
 	builder.WriteString(cmdUnzipBuilderWithDst(LTSRebalancedModName))
-	dockerArgs := dockerArgBuilder(fmt.Sprintf("/%s/%s", LTSRebalancedModName, LTSRebalancedModName), LTSRebalancedModName) + " " +
-		dockerArgBuilder(fmt.Sprintf("/%s/%s", LTSRebalancedModName, LTSRebalancedModNameKVFix), LTSRebalancedModNameKVFix)
-	return builder.String(), dockerArgs, link, latestTag, true, nil
+	builder.WriteString(fmt.Sprintf("cp /%s/* /mods/", LTSRebalancedModName))
+	builder.WriteString("\n")
+	return builder.String(), "", link, latestTag, true, nil
 }
 
 func (r RebalancedLTS) EnabledByDefault() bool {
