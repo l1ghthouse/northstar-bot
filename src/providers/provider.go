@@ -1,9 +1,9 @@
 package providers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
 
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers/vultr"
@@ -14,7 +14,7 @@ type Provider interface {
 	RestartServer(context.Context, *nsserver.NSServer) error
 	GetRunningServers(context.Context) ([]*nsserver.NSServer, error)
 	DeleteServer(context.Context, *nsserver.NSServer) error
-	ExtractServerLogs(context.Context, *nsserver.NSServer) (io.Reader, error)
+	ExtractServerLogs(context.Context, *nsserver.NSServer) (*bytes.Buffer, error)
 }
 
 type Config struct {

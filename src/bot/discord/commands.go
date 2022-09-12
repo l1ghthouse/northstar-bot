@@ -203,7 +203,7 @@ type handler struct {
 	rateCounter          *ratecounter.RateCounter
 	createLock           *sync.Mutex
 	CommandOverrides     []CommandOverrides
-	notifyer             *Notifyer
+	notifier             *Notifier
 }
 
 const unknown = "unknown"
@@ -541,12 +541,12 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 		}
 	}
 
-	if h.notifyer != nil {
+	if h.notifier != nil {
 		logs, err := h.p.ExtractServerLogs(ctx, server)
 		if err != nil {
 			log.Println(fmt.Sprintf("unable to extract logs for server: %v", err))
 		} else {
-			go h.notifyer.NotifyAndAttach(fmt.Sprintf("Server %s is due for deletion. Logs:", server.Name), fmt.Sprintf("%s.log.zip", server.Name), logs)
+			go h.notifier.NotifyAndAttachServerData(server.Name, "Deleted, logs:", fmt.Sprintf("%s.log.zip", server.Name), logs)
 		}
 	}
 

@@ -1,28 +1,28 @@
 package autodelete
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"time"
 
-	"github.com/l1ghthouse/northstar-bootstrap/src/bot/notifyer"
+	"github.com/l1ghthouse/northstar-bootstrap/src/bot/notifier"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"github.com/l1ghthouse/northstar-bootstrap/src/providers"
 )
 
 type Manager struct {
-	notifyer    notifyer.Notifyer
+	notifier    notifier.Notifier
 	provider    providers.Provider
 	maxLifetime time.Duration
 	repo        nsserver.Repo
 }
 
 // NewAutoDeleteManager creates a new auto delete manager
-func NewAutoDeleteManager(repo nsserver.Repo, provider providers.Provider, notifyer notifyer.Notifyer, maxLifetime time.Duration) *Manager {
+func NewAutoDeleteManager(repo nsserver.Repo, provider providers.Provider, notifier notifier.Notifier, maxLifetime time.Duration) *Manager {
 	return &Manager{
-		notifyer:    notifyer,
+		notifier:    notifier,
 		provider:    provider,
 		maxLifetime: maxLifetime,
 		repo:        repo,
@@ -63,9 +63,9 @@ func (d *Manager) AutoDelete() {
 }
 
 func (d *Manager) deleteAndNotify(ctx context.Context, server *nsserver.NSServer) {
-	var logFile io.Reader
+	var logFile *bytes.Buffer
 	var err error
-	if d.notifyer != nil {
+	if d.notifier != nil {
 		logFile, err = d.provider.ExtractServerLogs(ctx, server)
 		if err != nil {
 			log.Println("error extracting logs: ", err)
@@ -75,8 +75,8 @@ func (d *Manager) deleteAndNotify(ctx context.Context, server *nsserver.NSServer
 	err = d.provider.DeleteServer(ctx, server)
 	if err != nil {
 		log.Println("error deleting server: ", err)
-		if d.notifyer != nil {
-			d.notifyer.Notify(fmt.Sprintf("error deleting server: %v", err))
+		if d.notifier != nil {
+			d.notifier.NotifyServer(server.Name, fmt.Sprintf("error deleting server: %v", err))
 		}
 	}
 
@@ -85,7 +85,7 @@ func (d *Manager) deleteAndNotify(ctx context.Context, server *nsserver.NSServer
 		log.Println("error deleting server from database: ", err)
 	}
 
-	if d.notifyer != nil {
-		d.notifyer.NotifyAndAttach(fmt.Sprintf("Server '%s' has been deleted because it was up for over %s", server.Name, d.maxLifetime.String()), fmt.Sprintf("%s.log.zip", server.Name), logFile)
+	if d.notifier != nil {
+		d.notifier.NotifyAndAttachServerData(server.Name, fmt.Sprintf("Deleted because it was up for over %s", d.maxLifetime.String()), fmt.Sprintf("%s.log.zip", server.Name), logFile)
 	}
 }

@@ -20,7 +20,9 @@ type Config struct {
 	DcBotToken       string `required:"true"`
 	DcGuildID        string `required:"true"`
 	BotReportChannel string ``
-	CommandDefaults  []CommandOverrides
+	// very hardcody, really needs a concept along the lines of: "Data PostProcessing"
+	RebalancedLTSRankingMongoDBString string ``
+	CommandDefaults                   []CommandOverrides
 }
 
 type CommandOverrides struct {
@@ -45,13 +47,8 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 	if maxServersPerHour != 0 {
 		counter = ratecounter.NewRateCounter(time.Hour)
 	}
-	var n *Notifyer
-	if d.config.BotReportChannel != "" {
-		n = &Notifyer{
-			discordClient: discordClient,
-			reportChannel: d.config.BotReportChannel,
-		}
-	}
+
+	notifier := NewNotifier(discordClient, d.config.BotReportChannel, d.config.RebalancedLTSRankingMongoDBString)
 
 	botHandler := handler{
 		p:                    provider,
@@ -63,7 +60,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 		rateCounter:          counter,
 		createLock:           &sync.Mutex{},
 		CommandOverrides:     d.config.CommandDefaults,
-		notifyer:             n,
+		notifier:             notifier,
 	}
 
 	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){}
@@ -129,7 +126,7 @@ func (d *discordBot) Start(provider providers.Provider, nsRepo nsserver.Repo, ma
 		}
 	}
 
-	return autodelete.NewAutoDeleteManager(nsRepo, provider, n, autoDeleteDuration), nil
+	return autodelete.NewAutoDeleteManager(nsRepo, provider, notifier, autoDeleteDuration), nil
 }
 
 func (d *discordBot) gracefulDiscordClose(discordClient io.Closer, callbackDone chan struct{}) {

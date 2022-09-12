@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"strings"
@@ -25,13 +24,15 @@ const (
 )
 
 type Config struct {
-	APIKey string `required:"true"`
-	Tag    string `default:"ephemeral"`
+	APIKey   string `required:"true"`
+	Tag      string `default:"ephemeral"`
+	LogLimit uint   `default:"7340032"`
 }
 
 type Vultr struct {
-	key string
-	Tag string
+	key      string
+	Tag      string
+	LogLimit uint
 }
 
 func (v Vultr) CreateServer(ctx context.Context, server *nsserver.NSServer) error {
@@ -94,14 +95,14 @@ func (v Vultr) GetRunningServers(ctx context.Context) ([]*nsserver.NSServer, err
 	return ns, nil
 }
 
-func (v Vultr) ExtractServerLogs(ctx context.Context, server *nsserver.NSServer) (io.Reader, error) {
+func (v Vultr) ExtractServerLogs(ctx context.Context, server *nsserver.NSServer) (*bytes.Buffer, error) {
 	vClient := newVultrClient(ctx, v.key)
 
-	return vClient.extractServerLogs(ctx, server.Name, server.DefaultPassword, v.Tag)
+	return vClient.extractServerLogs(ctx, server.Name, server.DefaultPassword, v.Tag, v.LogLimit)
 }
 
 func NewVultrProvider(cfg Config) (*Vultr, error) {
-	return &Vultr{key: cfg.APIKey, Tag: cfg.Tag}, nil
+	return &Vultr{key: cfg.APIKey, Tag: cfg.Tag, LogLimit: cfg.LogLimit}, nil
 }
 
 func client(ctx context.Context, key string) *govultr.Client {
@@ -145,7 +146,7 @@ func generateSSHClient(mainIP, password string) (*ssh.Client, error) {
 	return sshClient, nil
 }
 
-func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, password string, tag string) (io.Reader, error) {
+func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, password string, tag string, logLimit uint) (*bytes.Buffer, error) {
 	instance, err := v.getVultrInstanceByName(ctx, serverName, tag)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get vultr instance by name: %w", err)
@@ -178,7 +179,7 @@ func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, 
 	buffer := bytes.NewBuffer(nil)
 
 	file := &util.CappedBuffer{
-		Cap:   7340032, // 7MB
+		Cap:   int(logLimit), // 7MB
 		MyBuf: buffer,
 	}
 

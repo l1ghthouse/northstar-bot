@@ -8,7 +8,6 @@ import (
 type RemoveNavmesh struct{}
 
 func (r RemoveNavmesh) ModParams(ctx context.Context) (string, string, string, string, bool, error) {
-
 	fileContainerOrigin := "/usr/lib/northstar/R2Northstar/mods/"
 	folders := []string{
 		"Northstar.CustomServers/mod/maps/graphs",

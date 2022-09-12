@@ -8,6 +8,7 @@ run:
 linters:
   enable-all: true
   disable:
+    - gocognit
     - exhaustivestruct
     - gochecknoinits
     - gci
