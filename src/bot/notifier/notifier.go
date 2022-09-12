@@ -2,6 +2,7 @@ package notifier
 
 import (
 	"bytes"
+
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 )
 

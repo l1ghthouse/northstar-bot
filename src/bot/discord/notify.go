@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
-	"github.com/gofrs/uuid"
 	"github.com/imdario/mergo"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -211,7 +210,6 @@ func (d *Notifier) processRebalancedLTSLogs(server nsserver.NSServer, mongodbCon
 	rankingDataSlice := make([]interface{}, 0, len(rankingData))
 
 	for _, value := range rankingData {
-		value.MatchID = uuid.Must(uuid.NewV4()).String()
 		rankingDataSlice = append(rankingDataSlice, value)
 	}
 
