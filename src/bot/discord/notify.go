@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"github.com/gofrs/uuid"
 	"github.com/imdario/mergo"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -60,14 +61,15 @@ var rebalancedString = []byte("[LTSRebalanceData]")
 
 type LTSRebalanceLogID struct {
 	UID     string
-	MatchID int
+	MatchID string
 	Round   int
 }
 
 type LTSRebalanceLogStruct struct {
 	UID                          string  `json:"uid" bson:"uid"`
 	Round                        int     `json:"round" bson:"round"`
-	MatchID                      int     `json:"matchID" bson:"matchID"`
+	MatchID                      string  `json:"matchID" bson:"matchID"`
+	MatchTimestamp               int     `json:"matchTimestamp" bson:"matchTimestamp"`
 	Ranked                       bool    `json:"ranked" bson:"ranked"`
 	Name                         string  `json:"name" bson:"name"`
 	Rebalance                    bool    `json:"rebalance" bson:"rebalance"`
@@ -209,7 +211,7 @@ func (d *Notifier) processRebalancedLTSLogs(server nsserver.NSServer, mongodbCon
 	rankingDataSlice := make([]interface{}, 0, len(rankingData))
 
 	for _, value := range rankingData {
-		value.Ranked = server.Ranked
+		value.MatchID = uuid.Must(uuid.NewV4()).String()
 		rankingDataSlice = append(rankingDataSlice, value)
 	}
 

@@ -26,7 +26,6 @@ type NSServer struct {
 	DockerImageVersion string            `json:"dockerImageVersion" gorm:"not null;default:null"`
 	ModOptions         datatypes.JSONMap `json:"options" gorm:""`
 	TickRate           uint64            `json:"tick_rate" gorm:""`
-	Ranked             bool              `json:"ranked" gorm:"not null;default:false"`
 	CreatedAt          time.Time
 }
 

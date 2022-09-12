@@ -55,7 +55,6 @@ func serverCreateVersionChoices() (options []*discordgo.ApplicationCommandOption
 }
 
 const CreateServerOptInsecure = "insecure"
-const CreateServerOptRanked = "ranked"
 const CreateServerOptMasterServer = "master_server"
 const CreateServerVersionOpt = "server_version"
 const CreateServerCustomDockerContainerOpt = "custom_container"
@@ -75,11 +74,6 @@ var (
 					Name:        "region",
 					Description: "region in which the server will be created",
 					Required:    true,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionBoolean,
-					Name:        CreateServerOptRanked,
-					Description: "indicates whether the server should be considered for ranked",
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionBoolean,
@@ -281,19 +275,6 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 		}
 	}
 
-	var ranked bool
-	{
-		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerOptRanked)
-		if ok {
-			ranked = val.BoolValue()
-		} else {
-			val, ok := h.getGlobalOverrideBoolValue(interaction.ApplicationCommandData().Name, CreateServerOptRanked)
-			if ok {
-				ranked = val
-			}
-		}
-	}
-
 	var tickRate uint64
 	{
 		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerTickRate)
@@ -380,7 +361,6 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 		TickRate:           tickRate,
 		DockerImageVersion: dockerImageVersion,
 		MasterServer:       masterServer,
-		Ranked:             ranked,
 	}, nil
 }
 
