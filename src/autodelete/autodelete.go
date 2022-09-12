@@ -76,7 +76,7 @@ func (d *Manager) deleteAndNotify(ctx context.Context, server *nsserver.NSServer
 	if err != nil {
 		log.Println("error deleting server: ", err)
 		if d.notifier != nil {
-			d.notifier.NotifyServer(server.Name, fmt.Sprintf("error deleting server: %v", err))
+			d.notifier.NotifyServer(server, fmt.Sprintf("error deleting server: %v", err))
 		}
 	}
 
@@ -86,6 +86,6 @@ func (d *Manager) deleteAndNotify(ctx context.Context, server *nsserver.NSServer
 	}
 
 	if d.notifier != nil {
-		d.notifier.NotifyAndAttachServerData(server.Name, fmt.Sprintf("Deleted because it was up for over %s", d.maxLifetime.String()), fmt.Sprintf("%s.log.zip", server.Name), logFile)
+		d.notifier.NotifyAndAttachServerData(server, fmt.Sprintf("Deleted because it was up for over %s", d.maxLifetime.String()), fmt.Sprintf("%s.log.zip", server.Name), logFile)
 	}
 }

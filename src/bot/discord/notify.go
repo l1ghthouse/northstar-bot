@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/imdario/mergo"
+	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"io"
@@ -31,26 +32,26 @@ func NewNotifier(discordClient *discordgo.Session, reportChannel string, rebalan
 	}
 }
 
-func (d *Notifier) NotifyServer(serverName string, message string) {
+func (d *Notifier) NotifyServer(server *nsserver.NSServer, message string) {
 	if d.reportChannel != "" {
-		sendMessage(d.discordClient, d.reportChannel, fmt.Sprintf("Server %s:\n", serverName)+message)
+		sendMessage(d.discordClient, d.reportChannel, fmt.Sprintf("Server %s:\n", server.Name)+message)
 	}
 }
 
-func (d *Notifier) NotifyAndAttachServerData(serverName string, message string, filename string, file *bytes.Buffer) {
+func (d *Notifier) NotifyAndAttachServerData(server *nsserver.NSServer, message string, filename string, file *bytes.Buffer) {
 	if d.reportChannel != "" {
 		if file != nil {
 			if d.RebalancedLTSRankingMongoDBString != "" {
 				buffer := bytes.NewBuffer(file.Bytes())
-				go d.processRebalancedLTSLogs(serverName, d.RebalancedLTSRankingMongoDBString, buffer)
+				go d.processRebalancedLTSLogs(*server, d.RebalancedLTSRankingMongoDBString, buffer)
 			}
-			sendComplexMessage(d.discordClient, d.reportChannel, fmt.Sprintf("Server %s:\n", serverName)+message, []*discordgo.File{{
+			sendComplexMessage(d.discordClient, d.reportChannel, fmt.Sprintf("Server %s:\n", server.Name)+message, []*discordgo.File{{
 				Name:        filename,
 				ContentType: "application/octet-stream",
 				Reader:      file,
 			}})
 		} else {
-			d.NotifyServer(serverName, message)
+			d.NotifyServer(server, message)
 		}
 	}
 }
@@ -67,6 +68,7 @@ type LTSRebalanceLogStruct struct {
 	UID                          string  `json:"uid" bson:"uid"`
 	Round                        int     `json:"round" bson:"round"`
 	MatchID                      int     `json:"matchID" bson:"matchID"`
+	Ranked                       bool    `json:"ranked" bson:"ranked"`
 	Name                         string  `json:"name" bson:"name"`
 	Rebalance                    bool    `json:"rebalance" bson:"rebalance"`
 	PerfectKits                  bool    `json:"perfectKits" bson:"perfectKits"`
@@ -188,7 +190,7 @@ func extractData(zipArchive *bytes.Buffer) map[LTSRebalanceLogID]LTSRebalanceLog
 	return dict
 }
 
-func (d *Notifier) processRebalancedLTSLogs(serverName string, mongodbConnection string, zipArchive *bytes.Buffer) {
+func (d *Notifier) processRebalancedLTSLogs(server nsserver.NSServer, mongodbConnection string, zipArchive *bytes.Buffer) {
 
 	rankingData := extractData(zipArchive)
 
@@ -207,16 +209,17 @@ func (d *Notifier) processRebalancedLTSLogs(serverName string, mongodbConnection
 	rankingDataSlice := make([]interface{}, 0, len(rankingData))
 
 	for _, value := range rankingData {
+		value.Ranked = server.Ranked
 		rankingDataSlice = append(rankingDataSlice, value)
 	}
 
 	_, err = client.Database("ranking").Collection("ranking").InsertMany(context.Background(), rankingDataSlice, options.InsertMany().SetOrdered(false))
 	if err != nil {
 		log.Println("error inserting many", err)
-		d.NotifyServer(serverName, fmt.Sprintf("Error inserting ranking data: %v", err.Error()))
+		d.NotifyServer(&server, fmt.Sprintf("Error inserting ranking data: %v", err.Error()))
 		return
 	}
 
-	d.NotifyServer(serverName, "Successfully inserted ranking data")
+	d.NotifyServer(&server, "Successfully inserted ranking data")
 
 }
