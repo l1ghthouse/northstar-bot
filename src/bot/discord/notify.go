@@ -69,6 +69,7 @@ type LTSRebalanceLogStruct struct {
 	Round                        int     `json:"round" bson:"round"`
 	MatchID                      string  `json:"matchID" bson:"matchID"`
 	MatchTimestamp               int     `json:"matchTimestamp" bson:"matchTimestamp"`
+	ServerName                   string  `json:"serverName" bson:"serverName"`
 	Ranked                       bool    `json:"ranked" bson:"ranked"`
 	Name                         string  `json:"name" bson:"name"`
 	Rebalance                    bool    `json:"rebalance" bson:"rebalance"`
@@ -210,6 +211,7 @@ func (d *Notifier) processRebalancedLTSLogs(server nsserver.NSServer, mongodbCon
 	rankingDataSlice := make([]interface{}, 0, len(rankingData))
 
 	for _, value := range rankingData {
+		value.ServerName = server.Name
 		rankingDataSlice = append(rankingDataSlice, value)
 	}
 
