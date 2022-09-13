@@ -90,6 +90,7 @@ type LTSRebalanceLogStruct struct {
 	DamageDealtAuto              int     `json:"damageDealtAuto" bson:"damageDealtAuto"`
 	DamageDealtPilot             int     `json:"damageDealtPilot" bson:"damageDealtPilot"`
 	DamageDealtBlocked           int     `json:"damageDealtBlocked" bson:"damageDealtBlocked"`
+	DamageDealtSelf              int     `json:"damageDealtSelf" bson:"damageDealtSelf"`
 	CritRateDealt                float32 `json:"critRateDealt" bson:"critRateDealt"`
 	DamageTaken                  int     `json:"damageTaken" bson:"damageTaken"`
 	DamageTakenShields           int     `json:"damageTakenShields" bson:"damageTakenShields"`
