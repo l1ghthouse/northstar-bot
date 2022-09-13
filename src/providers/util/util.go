@@ -158,7 +158,7 @@ export NS_SERVER_REGION="%s"
 export NS_NAME="%s"
 export NS_SERVER_NAME="[$NS_SERVER_REGION]$NS_NAME"
 export NS_SERVER_DESC="%s"
-export NS_EXTRA_ARGUMENTS="%s"
+export NS_EXTRA_ARGUMENTS="%s +ns_allow_spectators"
 
 docker pull $IMAGE
 
