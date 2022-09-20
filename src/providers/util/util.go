@@ -37,7 +37,7 @@ func LatestStableDockerNorthstar() (string, string) {
 
 const NorthstarDedicatedRepo = "ghcr.io/pg9182/"
 
-var DockerTagRegexp = regexp.MustCompile("^(northstar-dedicated|northstar-dedicated-dev):([a-zA-Z0-9_.-]{1,128})$")
+var DockerTagRegexp = regexp.MustCompile("^(northstar-dedicated|northstar-dedicated-ci|northstar-dedicated-dev):([a-zA-Z0-9_.-]{1,128})$")
 
 var NorthstarVersions = map[string]DockerVersion{
 	"1.9.3": {
