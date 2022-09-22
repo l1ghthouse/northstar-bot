@@ -84,6 +84,10 @@ type LTSRebalanceLogStruct struct {
 	Core1                        string  `json:"core1" bson:"core1"`
 	Core2                        string  `json:"core2" bson:"core2"`
 	Core3                        string  `json:"core3" bson:"core3"`
+	DamageDealtBlockedTarget     int     `json:"damageDealtBlockedTarget" bson:"damageDealtBlockedTarget"`
+	DamageTakenBlockedTarget     int     `json:"damageTakenBlockedTarget" bson:"damageTakenBlockedTarget"`
+	DamageDealtCloseAlly         int     `json:"damageDealtCloseAlly" bson:"damageDealtCloseAlly"`
+	DamageDealtCloseEnemy        int     `json:"damageDealtCloseEnemy" bson:"damageDealtCloseEnemy"`
 	DamageDealt                  int     `json:"damageDealt" bson:"damageDealt"`
 	DamageDealtShields           int     `json:"damageDealtShields" bson:"damageDealtShields"`
 	DamageDealtTempShields       int     `json:"damageDealtTempShields" bson:"damageDealtTempShields"`
@@ -117,6 +121,13 @@ type LTSRebalanceLogStruct struct {
 	TimeAsPilot                  float32 `json:"timeAsPilot" bson:"timeAsPilot"`
 	TimeDeathPilot               float32 `json:"timeDeathPilot" bson:"timeDeathPilot"`
 	Ejection                     bool    `json:"ejection" bson:"ejection"`
+	AvgDistanceToCenterAllies    float32 `json:"avgDistanceToCenterAllies" bson:"avgDistanceToCenterAllies"`
+	AvgDistanceToCenterEnemies   float32 `json:"avgDistanceToCenterEnemies" bson:"avgDistanceToCenterEnemies"`
+	AvgDistanceBetweenCenters    float32 `json:"avgDistanceBetweenCenters" bson:"avgDistanceBetweenCenters"`
+	AvgDistanceToBatteries       float32 `json:"avgDistanceToBatteries" bson:"avgDistanceToBatteries"`
+	AvgDistanceToCloseBattery    float32 `json:"avgDistanceToCloseBattery" bson:"avgDistanceToCloseBattery"`
+	AvgDistanceOnCritDealt       float32 `json:"avgDistanceOnCritDealt" bson:"avgDistanceOnCritDealt"`
+	AvgDistanceOnNonCritDealt    float32 `json:"avgDistanceOnNonCritDealt" bson:"avgDistanceOnNonCritDealt"`
 	AvgDistanceToAllies          float32 `json:"avgDistanceToAllies" bson:"avgDistanceToAllies"`
 	AvgDistanceToCloseAlly       float32 `json:"avgDistanceToCloseAlly" bson:"avgDistanceToCloseAlly"`
 	AvgDistanceToEnemies         float32 `json:"avgDistanceToEnemies" bson:"avgDistanceToEnemies"`
