@@ -26,7 +26,7 @@ var ByName = map[string]func() Mod{
 	},
 	"parseable_logs": func() Mod {
 		return &ThunderstoreMod{
-			Enabled: true,
+			Enabled: false,
 			Name:    "ParseableLogs",
 		}
 	},
