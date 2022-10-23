@@ -138,12 +138,22 @@ func generateSSHClient(mainIP, password string) (*ssh.Client, error) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", mainIP, sshPort), sshConfig)
-	if err != nil {
-		return nil, fmt.Errorf("unable to connect to vultr instance: %w", err)
-	}
+	var sshClient *ssh.Client
+	var err error
 
-	return sshClient, nil
+	for i := 1; i <= 5; i++ {
+		sshClient, err = ssh.Dial("tcp", fmt.Sprintf("%s:%s", mainIP, sshPort), sshConfig)
+		if err != nil {
+			log.Printf("failed to dial: %v", err)
+			if i != 10 {
+				log.Printf("retrying in 5 seconds")
+				time.Sleep(5 * time.Second)
+			}
+		} else {
+			return sshClient, nil
+		}
+	}
+	return nil, fmt.Errorf("unable to connect to vultr instance: %w", err)
 }
 
 func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, password string, tag string, logLimit uint) (*bytes.Buffer, error) {
