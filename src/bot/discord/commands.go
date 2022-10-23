@@ -545,6 +545,7 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 		logs, err := h.p.ExtractServerLogs(ctx, server)
 		if err != nil {
 			log.Println(fmt.Sprintf("unable to extract logs for server: %v", err))
+			h.notifier.NotifyServer(server, fmt.Sprintf("unable to extract logs for server: %v", err))
 		} else {
 			go h.notifier.NotifyAndAttachServerData(server, "Deleted, logs:", fmt.Sprintf("%s.log.zip", server.Name), logs)
 		}

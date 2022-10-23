@@ -69,6 +69,7 @@ func (d *Manager) deleteAndNotify(ctx context.Context, server *nsserver.NSServer
 		logFile, err = d.provider.ExtractServerLogs(ctx, server)
 		if err != nil {
 			log.Println("error extracting logs: ", err)
+			d.notifier.NotifyServer(server, fmt.Sprintf("error extracting logs: %v", err))
 		}
 	}
 
