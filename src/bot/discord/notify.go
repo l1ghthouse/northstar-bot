@@ -188,6 +188,12 @@ func extractData(zipArchive *bytes.Buffer) map[LTSRebalanceLogID]LTSRebalanceLog
 		if err != nil {
 			log.Println("error unmarshalling ranking json", err)
 		}
+
+		if logStruct.UID == "" || logStruct.MatchID == "" || logStruct.Round == 0 {
+			log.Printf("Error: one of the following is an empty value: UID, MatchID, Round. Skipping line: %s", line)
+			continue
+		}
+
 		LTSRebalanceLogID := LTSRebalanceLogID{
 			UID:     logStruct.UID,
 			MatchID: logStruct.MatchID,
