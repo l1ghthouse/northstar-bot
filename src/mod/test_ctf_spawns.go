@@ -30,6 +30,10 @@ func (r TestCTFSpawns) ModParams(ctx context.Context) (string, string, string, s
 	return wget, dockerArgs, "", "latest", false, nil
 }
 
+func (r TestCTFSpawns) Validate(otherMods []Mod) error {
+	return nil
+}
+
 func (r TestCTFSpawns) EnabledByDefault() bool {
 	return false
 }

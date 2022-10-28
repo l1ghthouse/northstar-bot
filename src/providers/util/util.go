@@ -112,34 +112,46 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 	OptionalCmd := ""
 	DockerArgs := ""
 	var mergeOptions = make(map[string]interface{})
+
+	var modsMap = make(map[string]mod.Mod)
+
 	for option, value := range server.ModOptions {
 		knownMod := false
-		var m mod.Mod
 		for modName, generator := range mod.ByName {
 			if option == modName {
 				knownMod = true
 				if value.(bool) {
-					m = generator()
+					modsMap[modName] = generator()
 				}
 			}
 		}
 		if !knownMod {
-			m = mod.ThunderstoreMod{
+			modsMap[option] = mod.ThunderstoreMod{
 				Enabled: false,
 				Name:    option,
 			}
 		}
-		if m != nil {
-			cmd, args, link, tag, requiredByClient, err := m.ModParams(ctx)
-			if err != nil {
-				return "", fmt.Errorf("error generating mod: %w", err)
-			}
-			OptionalCmd = OptionalCmd + "\n" + cmd
-			DockerArgs = DockerArgs + " " + args + " "
-			mergeOptions[option+VersionPostfix] = tag
-			mergeOptions[option+LinkPostfix] = link
-			mergeOptions[option+RequiredByClientPostfix] = requiredByClient
+	}
+
+	var modsArr []mod.Mod
+	for _, m := range modsMap {
+		modsArr = append(modsArr, m)
+	}
+
+	for name, m := range modsMap {
+		err := m.Validate(modsArr)
+		if err != nil {
+			return "", err
 		}
+		cmd, args, link, tag, requiredByClient, err := m.ModParams(ctx)
+		if err != nil {
+			return "", fmt.Errorf("error generating mod: %w", err)
+		}
+		OptionalCmd = OptionalCmd + "\n" + cmd
+		DockerArgs = DockerArgs + " " + args + " "
+		mergeOptions[name+VersionPostfix] = tag
+		mergeOptions[name+LinkPostfix] = link
+		mergeOptions[name+RequiredByClientPostfix] = requiredByClient
 	}
 
 	var extraArgs string

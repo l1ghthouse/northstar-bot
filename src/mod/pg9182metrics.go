@@ -22,6 +22,10 @@ wget -O- --tries 1 --no-verbose --dns-timeout=3 --connect-timeout=5 --user=nsbot
 	return cmd, "", "", "", false, nil
 }
 
+func (r PG9182Metrics) Validate(otherMods []Mod) error {
+	return nil
+}
+
 func (r PG9182Metrics) EnabledByDefault() bool {
 	_, ok := os.LookupEnv("NSBOT_METRICS_TOKEN")
 	return ok

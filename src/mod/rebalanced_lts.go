@@ -7,7 +7,7 @@ import (
 )
 
 type RebalancedLTS struct {
-	preRelease bool
+	PreRelease bool
 }
 
 const LTSRebalancedRepoOwner = "Dinorush"
@@ -16,7 +16,7 @@ const LTSRebalancedModName = LTSRebalancedRepoOwner + "." + LTSRebalancedRepoNam
 const LTSRebalancedModNameKVFix = LTSRebalancedModName + "_KVFix"
 
 func (r RebalancedLTS) ModParams(ctx context.Context) (string, string, string, string, bool, error) {
-	latestTag, err := latestGithubReleaseTag(ctx, LTSRebalancedRepoOwner, LTSRebalancedRepoName, r.preRelease)
+	latestTag, err := latestGithubReleaseTag(ctx, LTSRebalancedRepoOwner, LTSRebalancedRepoName, r.PreRelease)
 	if err != nil {
 		return "", "", "", "", false, err
 	}
@@ -27,6 +27,16 @@ func (r RebalancedLTS) ModParams(ctx context.Context) (string, string, string, s
 	builder.WriteString(fmt.Sprintf("cp -r /%s/* /mods/", LTSRebalancedModName))
 	builder.WriteString("\n")
 	return builder.String(), "", link, latestTag, true, nil
+}
+
+func (r RebalancedLTS) Validate(otherMods []Mod) error {
+	for _, mod := range otherMods {
+		v, ok := mod.(RebalancedLTS)
+		if ok && v.PreRelease != r.PreRelease {
+			return fmt.Errorf("cannot have both pre-release and release versions of Rebalanced LTS enabled")
+		}
+	}
+	return nil
 }
 
 func (r RebalancedLTS) EnabledByDefault() bool {

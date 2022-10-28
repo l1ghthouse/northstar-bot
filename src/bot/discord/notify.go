@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/imdario/mergo"
+	"github.com/l1ghthouse/northstar-bootstrap/src/mod"
 	"github.com/l1ghthouse/northstar-bootstrap/src/nsserver"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -69,7 +70,6 @@ type LTSRebalanceLogStruct struct {
 	Round                        int     `json:"round" bson:"round"`
 	MatchID                      string  `json:"matchID" bson:"matchID"`
 	MatchTimestamp               int     `json:"matchTimestamp" bson:"matchTimestamp"`
-	ServerName                   string  `json:"serverName" bson:"serverName"`
 	Ranked                       bool    `json:"ranked" bson:"ranked"`
 	Name                         string  `json:"name" bson:"name"`
 	Rebalance                    bool    `json:"rebalance" bson:"rebalance"`
@@ -138,6 +138,10 @@ type LTSRebalanceLogStruct struct {
 	AvgDistanceToCloseEnemyPilot float32 `json:"avgDistanceToCloseEnemyPilot" bson:"avgDistanceToCloseEnemyPilot"`
 	DistanceTravelled            float32 `json:"distanceTravelled" bson:"distanceTravelled"`
 	DistanceTravelledPilot       float32 `json:"distanceTravelledPilot" bson:"distanceTravelledPilot"`
+
+	// Additional Metadata fields
+	ServerName   string `json:"serverName" bson:"serverName"`
+	IsPreRelease bool   `json:"isPreRelease" bson:"isPreRelease"`
 }
 
 func extractData(zipArchive *bytes.Buffer) map[LTSRebalanceLogID]LTSRebalanceLogStruct {
@@ -230,6 +234,10 @@ func (d *Notifier) processRebalancedLTSLogs(server nsserver.NSServer, mongodbCon
 
 	for _, value := range rankingData {
 		value.ServerName = server.Name
+		v, ok := server.ModOptions[mod.RebalancedLtsModTest].(bool)
+		if ok {
+			value.IsPreRelease = v
+		}
 		rankingDataSlice = append(rankingDataSlice, value)
 	}
 

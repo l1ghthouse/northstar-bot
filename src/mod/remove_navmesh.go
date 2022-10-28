@@ -26,6 +26,10 @@ func (r RemoveNavmesh) ModParams(ctx context.Context) (string, string, string, s
 	return cmd, dockerArgs, "", "latest", false, nil
 }
 
+func (r RemoveNavmesh) Validate(otherMods []Mod) error {
+	return nil
+}
+
 func (r RemoveNavmesh) EnabledByDefault() bool {
 	return false
 }
