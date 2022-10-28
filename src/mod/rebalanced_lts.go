@@ -33,7 +33,7 @@ func (r RebalancedLTS) Validate(otherMods []Mod) error {
 	for _, mod := range otherMods {
 		v, ok := mod.(*RebalancedLTS)
 		if ok && v.PreRelease != r.PreRelease {
-			return fmt.Errorf("cannot have both pre-release and release versions of Rebalanced LTS enabled")
+			return fmt.Errorf("cannot have both pre-release and release versions of Rebalanced LTS enabled. Please explicitly enable/disable both mods")
 		}
 	}
 	return nil
