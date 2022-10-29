@@ -138,6 +138,7 @@ type LTSRebalanceLogStruct struct {
 	AvgDistanceToCloseEnemyPilot float32 `json:"avgDistanceToCloseEnemyPilot" bson:"avgDistanceToCloseEnemyPilot"`
 	DistanceTravelled            float32 `json:"distanceTravelled" bson:"distanceTravelled"`
 	DistanceTravelledPilot       float32 `json:"distanceTravelledPilot" bson:"distanceTravelledPilot"`
+	Version                      string  `json:"version" bson:"version"`
 
 	// Additional Metadata fields
 	ServerName   string `json:"serverName" bson:"serverName"`
