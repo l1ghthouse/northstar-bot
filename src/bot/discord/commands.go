@@ -174,7 +174,7 @@ var (
 		},
 		{
 			Name:        ExtendLifetime,
-			Description: "Extends lifetime of the server by a given amount",
+			Description: "Extends lifetime of the server by a given amount. Ex: 1h, 30m, 1h30m50s",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
