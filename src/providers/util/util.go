@@ -42,7 +42,7 @@ var DockerTagRegexp = regexp.MustCompile("^(northstar-dedicated|northstar-dedica
 var NorthstarVersions = map[string]DockerVersion{
 	"1.12.1": {
 		IsLatest:    true,
-		DockerImage: NorthstarDedicatedRepo + "northstar-dedicated-ci:1-tf2.0.11.0-ns1.12.1-ci.c14bdc62.77.4350815031-nslauncher.b7b0c4c9.4346821849",
+		DockerImage: NorthstarDedicatedRepo + "northstar-dedicated:1-tf2.0.11.0-ns1.12.1",
 	},
 	"1.11.3": {
 		IsLatest:    false,
