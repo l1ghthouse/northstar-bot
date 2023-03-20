@@ -49,6 +49,10 @@ var NorthstarVersions = map[string]DockerVersion{
 		IsLatest:    true,
 		DockerImage: NorthstarDedicatedRepo + "northstar-dedicated:1-tf2.0.11.0-ns1.11.3",
 	},
+	"1.11.4": {
+		IsLatest:    false,
+		DockerImage: NorthstarDedicatedRepo + "northstar-dedicated:1-tf2.0.11.0-ns1.11.4",
+	},
 	"1.12.3": {
 		IsLatest:    false, // Not default, because unstable
 		DockerImage: NorthstarDedicatedRepo + "northstar-dedicated:1-tf2.0.11.0-ns1.12.3",
