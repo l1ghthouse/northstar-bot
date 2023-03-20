@@ -458,14 +458,15 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		note.WriteString(fmt.Sprintf("Insecure mode is enabled. If master server is offline, use: `connect %s:%d`", server.MainIP, server.GameUDPPort))
 		note.WriteString("\n")
 	}
-
-	note.WriteString(fmt.Sprintf("Server version: **%s**", server.ServerVersion))
-	timeToSpinUp := 3
+	timeToSpinUp := 2
 	if server.BareMetal {
 		timeToSpinUp = 10
-		note.WriteString(fmt.Sprintf("This is a bare metal server. It will take longer to spin up, but will be more performant. Ideally, you should only use this if you are hosting a tournament."))
+		note.WriteString(fmt.Sprintf("**This is a bare metal server. It will take longer to spin up, but will be more performant. Ideally, you should only use this if you are hosting a tournament.**"))
+		note.WriteString("\n")
 	}
-	note.WriteString(fmt.Sprintf(". Server will be up in: **%d** minutes", timeToSpinUp))
+
+	note.WriteString(fmt.Sprintf("Server version: **%s**", server.ServerVersion))
+	note.WriteString(fmt.Sprintf(". Server will be up in: **%d** minutes(This could be affected by slowness in vultr regions, or github API)", timeToSpinUp))
 	if h.autoDeleteDuration != time.Duration(0) {
 		note.WriteString(fmt.Sprintf(", and autodeleted in in **%s**", h.autoDeleteDuration.String()))
 	}
