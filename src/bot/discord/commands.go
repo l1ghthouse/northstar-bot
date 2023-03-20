@@ -396,45 +396,45 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	h.createLock.Lock()
 	defer h.createLock.Unlock()
 	if h.maxServerCreateRate != 0 && h.rateCounter.Rate() > int64(h.maxServerCreateRate) {
-		editDeferredInteractionReply(session, interaction.Interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.")
+		editDeferredInteractionReply(session, interaction.Interaction, "You have exceeded the maximum number of servers you can create per hour. Please try again later.", nil)
 
 		return
 	}
 	servers, err := h.p.GetRunningServers(ctx)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to list running servers: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to list running servers: %v", err), nil)
 
 		return
 	}
 	if len(servers) >= int(h.maxConcurrentServers) {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("You can't create more than %d servers", h.maxConcurrentServers), nil)
 
 		return
 	}
 	cachedServers, err := h.nsRepo.GetAll(ctx)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to list servers: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to list servers: %v", err), nil)
 
 		return
 	}
 
 	name, err := generateUniqueName(servers, cachedServers)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to generate unique server name: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to generate unique server name: %v", err), nil)
 
 		return
 	}
 
 	server, err := h.defaultServer(name, interaction)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to create server: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to create server: %v", err), nil)
 
 		return
 	}
 
 	err = h.p.CreateServer(ctx, server)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to create the target server. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to create the target server. error: %v", err), nil)
 
 		return
 	}
@@ -445,7 +445,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 
 	err = h.nsRepo.Store(ctx, []*nsserver.NSServer{server})
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to save server to the database: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to save server to the database: %v", err), nil)
 
 		return
 	}
@@ -511,7 +511,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		note.WriteString(fmt.Sprintf("cl_updaterate_mp %d", server.TickRate))
 	}
 
-	editDeferredInteractionReply(session, interaction.Interaction, note.String())
+	editDeferredInteractionReply(session, interaction.Interaction, note.String(), nil)
 }
 
 var ErrUnableToGenerateUniqueName = errors.New("unable to generate unique name")
@@ -548,10 +548,10 @@ func (h *handler) handleCommandFlagOverrides(session *discordgo.Session, interac
 	sendInteractionDeferred(session, interaction)
 	b, err := json.Marshal(h.CommandOverrides)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to marshal command flag overrides: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("unable to marshal command flag overrides: %v", err), nil)
 		return
 	}
-	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("```%s```", string(b)))
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("```%s```", string(b)), nil)
 }
 
 func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -582,7 +582,7 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 		Name: serverName,
 	})
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to delete the target server. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to delete the target server. error: %v", err), nil)
 
 		return
 	}
@@ -592,7 +592,7 @@ func (h *handler) handleDeleteServer(session *discordgo.Session, interaction *di
 		log.Println(fmt.Sprintf("unable to delete server from the database: %v", err))
 	}
 
-	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("deleted server %s", serverName))
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("deleted server %s", serverName), nil)
 }
 
 func (h *handler) handleRestartServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -603,19 +603,19 @@ func (h *handler) handleRestartServer(session *discordgo.Session, interaction *d
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err), nil)
 
 		return
 	}
 
 	err = h.p.RestartServer(ctx, server)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to restart the target server. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to restart the target server. error: %v", err), nil)
 
 		return
 	}
 
-	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("restarted server %s", serverName))
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("restarted server %s", serverName), nil)
 }
 
 func (h *handler) handleServerExtendLifetime(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -624,20 +624,20 @@ func (h *handler) handleServerExtendLifetime(session *discordgo.Session, interac
 	serverName := interaction.ApplicationCommandData().Options[0].StringValue()
 	extend, err := time.ParseDuration(interaction.ApplicationCommandData().Options[1].StringValue())
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to parse duration. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to parse duration. error: %v", err), nil)
 
 		return
 	}
 
 	if extend <= 0 {
-		editDeferredInteractionReply(session, interaction.Interaction, "duration should not be negative, or 0")
+		editDeferredInteractionReply(session, interaction.Interaction, "duration should not be negative, or 0", nil)
 
 		return
 	}
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err), nil)
 
 		return
 	}
@@ -647,7 +647,7 @@ func (h *handler) handleServerExtendLifetime(session *discordgo.Session, interac
 	}
 
 	if extend > h.maxExtendDuration {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("extended lifetime exceeded maximum allowed extended duration. Extended duration: %s, Max extended duration: %s", extend.String(), h.maxExtendDuration.String()))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("extended lifetime exceeded maximum allowed extended duration. Extended duration: %s, Max extended duration: %s", extend.String(), h.maxExtendDuration.String()), nil)
 
 		return
 	}
@@ -655,12 +655,12 @@ func (h *handler) handleServerExtendLifetime(session *discordgo.Session, interac
 	server.ExtendLifetime = &extend
 	err = h.nsRepo.Update(ctx, server)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("Failed to update ExtendLifetime field in database, error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("Failed to update ExtendLifetime field in database, error: %v", err), nil)
 
 		return
 	}
 
-	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("server lifetime successfully updated to: %s", server.ExtendLifetime))
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("server lifetime successfully updated to: %s", server.ExtendLifetime), nil)
 }
 
 func (h *handler) handleServerMetadata(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -671,21 +671,27 @@ func (h *handler) handleServerMetadata(session *discordgo.Session, interaction *
 
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err), nil)
 
 		return
 	}
 
 	serverMetadata, err := json.Marshal(server)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to marshal server struct. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to marshal server struct. error: %v", err), nil)
 
 		return
 	}
 
-	go sendMessageWithFilesDM(session, interaction.Member.User.ID, fmt.Sprintf("Server metadata:\n```%s```", string(serverMetadata)), nil)
+	files := []*discordgo.File{{
+		Name:        fmt.Sprintf("%s.metadata.json", server.Name),
+		ContentType: "application/octet-stream",
+		Reader:      strings.NewReader(string(serverMetadata)),
+	}}
 
-	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("metadata for %s was sent to you privately", serverName))
+	go sendMessageWithFilesDM(session, interaction.Member.User.ID, "server metadata:", files)
+
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("metadata for %s was sent to you privately", serverName), nil)
 }
 
 func (h *handler) handleListServer(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -695,14 +701,14 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 
 	nsservers, err := h.p.GetRunningServers(ctx)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to list running servers. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to list running servers. error: %v", err), nil)
 
 		return
 	}
 
 	cachedServers, err := h.nsRepo.GetAll(ctx)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to list running servers from database. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to list running servers from database. error: %v", err), nil)
 
 		return
 	}
@@ -737,7 +743,7 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 	servers := make([]string, len(nsservers))
 
 	if len(nsservers) == 0 {
-		editDeferredInteractionReply(session, interaction.Interaction, "No servers running")
+		editDeferredInteractionReply(session, interaction.Interaction, "No servers running", nil)
 
 		return
 	}
@@ -796,7 +802,19 @@ func (h *handler) handleListServer(session *discordgo.Session, interaction *disc
 		servers[idx] = builder.String()
 	}
 
-	editDeferredInteractionReply(session, interaction.Interaction, strings.Join(servers, "\n"))
+	message := strings.Join(servers, "\n")
+	var files []*discordgo.File
+	if len(message) > 1900 {
+		files = []*discordgo.File{{
+			Name:        "list_server.txt",
+			ContentType: "application/octet-stream",
+			Reader:      strings.NewReader(message),
+		}}
+
+		message = "List of servers is too long to be sent in a message. Sending as a file instead."
+	}
+
+	editDeferredInteractionReply(session, interaction.Interaction, message, files)
 }
 
 func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -805,7 +823,7 @@ func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *dis
 	sendInteractionDeferred(session, interaction)
 	server, err := h.nsRepo.GetByName(ctx, serverName)
 	if err != nil {
-		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err))
+		editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("failed to get server from cache database. error: %v", err), nil)
 
 		return
 	}
@@ -813,7 +831,7 @@ func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *dis
 	file, err := h.p.ExtractServerLogs(ctx, server)
 	if err != nil {
 		failure := fmt.Sprintf("failed to extract logs from target server. error: %v", err)
-		editDeferredInteractionReply(session, interaction.Interaction, failure)
+		editDeferredInteractionReply(session, interaction.Interaction, failure, nil)
 		return
 	}
 
@@ -824,5 +842,5 @@ func (h *handler) handleExtractLogs(session *discordgo.Session, interaction *dis
 	}}
 
 	go sendMessageWithFilesDM(session, interaction.Member.User.ID, fmt.Sprintf("logs extracted from server %s", serverName), files)
-	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("logs extraction for server %s is completed, and are sent privately to you", serverName))
+	editDeferredInteractionReply(session, interaction.Interaction, fmt.Sprintf("logs extraction for server %s is completed, and are sent privately to you", serverName), nil)
 }

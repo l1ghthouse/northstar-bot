@@ -31,8 +31,8 @@ func sendMessage(session *discordgo.Session, channelID string, msg string) {
 	}
 }
 
-func editDeferredInteractionReply(session *discordgo.Session, interaction *discordgo.Interaction, msg string) {
-	response := &discordgo.WebhookEdit{Content: msg}
+func editDeferredInteractionReply(session *discordgo.Session, interaction *discordgo.Interaction, msg string, files []*discordgo.File) {
+	response := &discordgo.WebhookEdit{Content: msg, Files: files}
 	_, err := session.InteractionResponseEdit(interaction, response)
 	if err != nil {
 		log.Println(fmt.Sprintf("failed to update interaction. error: %v", err))
