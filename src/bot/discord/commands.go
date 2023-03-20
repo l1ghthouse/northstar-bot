@@ -110,7 +110,7 @@ var (
 				{
 					Type:        discordgo.ApplicationCommandOptionBoolean,
 					Name:        CreateServerOptBareMetal,
-					Description: "Whether the server should be created on bare metal. It takes longer to create but bare metal server are more reliable for games with over 8 players. Bare metal servers are also less available than virtual servers.",
+					Description: "Whether the server should be created on bare metal.",
 				},
 			}, modApplicationCommand()...),
 		},
