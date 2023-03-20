@@ -52,7 +52,7 @@ func (v Vultr) CreateServer(ctx context.Context, server *nsserver.NSServer) erro
 func (v Vultr) RestartServer(ctx context.Context, server *nsserver.NSServer) error {
 	c := newVultrClient(ctx, v.key)
 
-	return c.restartNorthstarInstance(ctx, server.Name, server.DefaultPassword, v.Tags, server.BareMetal)
+	return c.restartNorthstarInstance(ctx, server.Name, server.SSHPrivateKey, v.Tags, server.BareMetal)
 }
 
 func (v Vultr) DeleteServer(ctx context.Context, server *nsserver.NSServer) error {
@@ -128,7 +128,7 @@ func (v Vultr) GetRunningServers(ctx context.Context) ([]*nsserver.NSServer, err
 func (v Vultr) ExtractServerLogs(ctx context.Context, server *nsserver.NSServer) (*bytes.Buffer, error) {
 	vClient := newVultrClient(ctx, v.key)
 
-	return vClient.extractServerLogs(ctx, server.Name, server.DefaultPassword, v.Tags, v.LogLimit, server.BareMetal)
+	return vClient.extractServerLogs(ctx, server.Name, server.SSHPrivateKey, v.Tags, v.LogLimit, server.BareMetal)
 }
 
 func NewVultrProvider(cfg Config) (*Vultr, error) {
@@ -156,20 +156,24 @@ var user = "root"
 var activeStatus = "active"
 var sshPort = "22"
 
-func generateSSHClient(mainIP, password string) (*ssh.Client, error) {
-	if password == "" {
-		return nil, fmt.Errorf("password is empty")
+func generateSSHClient(mainIP, sshPrivateKey string) (*ssh.Client, error) {
+	if sshPrivateKey == "" {
+		return nil, fmt.Errorf("private key is empty")
+	}
+
+	signer, err := ssh.ParsePrivateKey([]byte(sshPrivateKey))
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse private key: %w", err)
 	}
 
 	//nolint:gosec
 	sshConfig := &ssh.ClientConfig{
 		User:            user,
-		Auth:            []ssh.AuthMethod{ssh.Password(password)},
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	var sshClient *ssh.Client
-	var err error
 
 	for i := 1; i <= 5; i++ {
 		sshClient, err = ssh.Dial("tcp", fmt.Sprintf("%s:%s", mainIP, sshPort), sshConfig)
@@ -186,7 +190,7 @@ func generateSSHClient(mainIP, password string) (*ssh.Client, error) {
 	return nil, fmt.Errorf("unable to connect to vultr instance: %w", err)
 }
 
-func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, password string, tags []string, logLimit uint, bareMetal bool) (*bytes.Buffer, error) {
+func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, sshPrivateKey string, tags []string, logLimit uint, bareMetal bool) (*bytes.Buffer, error) {
 	var status string
 	var mainIP string
 	if bareMetal {
@@ -209,7 +213,7 @@ func (v *vultrClient) extractServerLogs(ctx context.Context, serverName string, 
 		return nil, fmt.Errorf("vultr instance is not active")
 	}
 
-	sshClient, err := generateSSHClient(mainIP, password)
+	sshClient, err := generateSSHClient(mainIP, sshPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -342,8 +346,27 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 		return fmt.Errorf("unable to create startup script: %w", err)
 	}
 
+	key, err := util.GeneratePrivateKey(4096)
+	if err != nil {
+		return fmt.Errorf("unable to generate ssh key: %w", err)
+	}
+
+	publicKey, err := util.GeneratePublicKey(&key.PublicKey)
+	if err != nil {
+		return fmt.Errorf("unable to generate ssh public key: %w", err)
+	}
+
+	sshKeyReq := govultr.SSHKeyReq{
+		Name:   server.Name,
+		SSHKey: string(publicKey),
+	}
+
+	sshKey, err := v.client.SSHKey.Create(ctx, &sshKeyReq)
+	if err != nil {
+		return err
+	}
+
 	var dateCreated string
-	var defaultPassword string
 
 	if server.BareMetal {
 		var bareMetalInstance *govultr.BareMetalServer
@@ -356,6 +379,7 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 				UserData:        cmd,          // Command to pull docker container, and create a server
 				StartupScriptID: resScript.ID, // Startup script
 				Tags:            tags,         // ephemeral is used to autodelete the instance after some time
+				SSHKeyIDs:       []string{sshKey.ID},
 			}
 
 			bareMetalInstance, err = v.client.BareMetalServer.Create(ctx, instanceOptions)
@@ -369,7 +393,6 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 		}
 
 		dateCreated = bareMetalInstance.DateCreated
-		defaultPassword = bareMetalInstance.DefaultPassword
 
 	} else {
 		var instance *govultr.Instance
@@ -382,6 +405,7 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 				UserData: cmd,          // Command to pull docker container, and create a server
 				ScriptID: resScript.ID, // Startup script
 				Tags:     tags,         // ephemeral is used to autodelete the instance after some time
+				SSHKeys:  []string{sshKey.ID},
 			}
 
 			instance, err = v.client.Instance.Create(ctx, instanceOptions)
@@ -395,7 +419,6 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 		}
 
 		dateCreated = instance.DateCreated
-		defaultPassword = instance.DefaultPassword
 
 	}
 
@@ -404,7 +427,7 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 		return fmt.Errorf("failed to parse date: %w", err)
 	}
 
-	server.DefaultPassword = defaultPassword
+	server.SSHPrivateKey = string(util.EncodePrivateKeyToPEM(key))
 
 	var maxWait <-chan time.Time
 
@@ -455,7 +478,15 @@ func (v *vultrClient) listStartupScripts(ctx context.Context) ([]govultr.Startup
 	return scripts, nil
 }
 
-func (v *vultrClient) restartNorthstarInstance(ctx context.Context, serverName string, password string, tags []string, isBareMetal bool) error {
+func (v *vultrClient) listSSHKeys(ctx context.Context) ([]govultr.SSHKey, error) {
+	sshKeys, _, err := v.client.SSHKey.List(ctx, &govultr.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to list startup scripts: %w", err)
+	}
+	return sshKeys, nil
+}
+
+func (v *vultrClient) restartNorthstarInstance(ctx context.Context, serverName string, sshPrivateKey string, tags []string, isBareMetal bool) error {
 	var status string
 	var mainIP string
 	if isBareMetal {
@@ -478,7 +509,7 @@ func (v *vultrClient) restartNorthstarInstance(ctx context.Context, serverName s
 		return fmt.Errorf("vultr instance is not active")
 	}
 
-	sshClient, err := generateSSHClient(mainIP, password)
+	sshClient, err := generateSSHClient(mainIP, sshPrivateKey)
 	if err != nil {
 		return err
 	}
@@ -510,6 +541,12 @@ func (v *vultrClient) deleteNorthstarInstance(ctx context.Context, serverName st
 		return err
 	}
 
+	err = v.deleteSSHKey(ctx, serverName)
+
+	if err != nil {
+		return err
+	}
+
 	instance, err := v.getVultrInstanceByName(ctx, serverName, tags)
 	if err != nil {
 		return fmt.Errorf("unable to list running instances: %w", err)
@@ -524,6 +561,11 @@ func (v *vultrClient) deleteNorthstarInstance(ctx context.Context, serverName st
 func (v *vultrClient) deleteBareMetalInstance(ctx context.Context, serverName string, tags []string) error {
 
 	err := v.deleteBootstrapScripts(ctx, serverName)
+	if err != nil {
+		return err
+	}
+
+	err = v.deleteSSHKey(ctx, serverName)
 	if err != nil {
 		return err
 	}
@@ -550,6 +592,24 @@ func (v *vultrClient) deleteBootstrapScripts(ctx context.Context, serverName str
 			err = v.client.StartupScript.Delete(ctx, script.ID)
 			if err != nil {
 				log.Printf("unable to delete startup script: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (v *vultrClient) deleteSSHKey(ctx context.Context, serverName string) error {
+	sshKeys, err := v.listSSHKeys(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to list startup scripts: %w", err)
+	}
+
+	for _, key := range sshKeys {
+		if key.Name == serverName {
+			err = v.client.SSHKey.Delete(ctx, key.ID)
+			if err != nil {
+				log.Printf("unable to delete ssh key: %v", err)
 			}
 		}
 	}

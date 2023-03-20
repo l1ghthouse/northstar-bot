@@ -15,7 +15,7 @@ type NSServer struct {
 	Region             string            `json:"region" gorm:"not null;default:null"`
 	Pin                string            `json:"pin" gorm:"not null;default:null"`
 	RequestedBy        string            `json:"requestedBy" gorm:"not null;default:null"`
-	DefaultPassword    string            `json:"defaultPassword" gorm:"not null;default:null"`
+	SSHPrivateKey      string            `json:"sshPrivateKey" gorm:"not null;default:null"`
 	Insecure           bool              `json:"insecure" gorm:"not null;default:false"`
 	BareMetal          bool              `json:"bareMetal" gorm:"not null;default:false"`
 	MainIP             string            `json:"mainIP" gorm:""`
