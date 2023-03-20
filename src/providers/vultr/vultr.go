@@ -346,7 +346,7 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 		return fmt.Errorf("unable to create startup script: %w", err)
 	}
 
-	key, err := util.GeneratePrivateKey(4096)
+	key, err := util.GeneratePrivateKey(1024)
 	if err != nil {
 		return fmt.Errorf("unable to generate ssh key: %w", err)
 	}
