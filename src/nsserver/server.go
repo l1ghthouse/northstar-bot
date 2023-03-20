@@ -17,6 +17,7 @@ type NSServer struct {
 	RequestedBy        string            `json:"requestedBy" gorm:"not null;default:null"`
 	DefaultPassword    string            `json:"defaultPassword" gorm:"not null;default:null"`
 	Insecure           bool              `json:"insecure" gorm:"not null;default:false"`
+	BareMetal          bool              `json:"bareMetal" gorm:"not null;default:false"`
 	MainIP             string            `json:"mainIP" gorm:""`
 	GameUDPPort        int               `json:"gameUDPPort" gorm:"not null;default:0"`
 	AuthTCPPort        int               `json:"authTCPPort" gorm:"not null;default:0"`

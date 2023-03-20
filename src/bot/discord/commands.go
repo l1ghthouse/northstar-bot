@@ -56,6 +56,7 @@ func serverCreateVersionChoices() (options []*discordgo.ApplicationCommandOption
 
 const CreateServerOptInsecure = "insecure"
 const CreateServerOptMasterServer = "master_server"
+const CreateServerOptBareMetal = "bare_metal"
 const CreateServerVersionOpt = "server_version"
 const CreateServerCustomDockerContainerOpt = "custom_container"
 const CreateServerCustomThunderstoreMods = "custom_thunderstore_mods"
@@ -105,6 +106,11 @@ var (
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Name:        CreateServerTickRate,
 					Description: "Custom TickRate to use for the server",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        CreateServerOptBareMetal,
+					Description: "Whether the server should be created on bare metal. It takes longer to create but bare metal server are more reliable for games with over 8 players. Bare metal servers are also less available than virtual servers.",
 				},
 			}, modApplicationCommand()...),
 		},
@@ -302,13 +308,28 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 		}
 	}
 
+	var isBareMetal bool
+	{
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerOptBareMetal)
+		if ok {
+			isBareMetal = val.BoolValue()
+		} else {
+			val, ok := h.getGlobalOverrideBoolValue(interaction.ApplicationCommandData().Name, CreateServerOptBareMetal)
+			if ok {
+				isBareMetal = val
+			} else {
+				isBareMetal = false
+			}
+		}
+	}
+
 	var masterServer string
 	{
 		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerOptMasterServer)
 		if ok {
 			masterServer = val.StringValue()
 		} else {
-			val, ok := h.getGlobalOverrideStringValue(interaction.ApplicationCommandData().Name, CreateServerOptInsecure)
+			val, ok := h.getGlobalOverrideStringValue(interaction.ApplicationCommandData().Name, CreateServerOptMasterServer)
 			if ok {
 				masterServer = val
 			} else {
@@ -355,6 +376,7 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 		Pin:                pin,
 		ModOptions:         modOptions,
 		Insecure:           isInsecure,
+		BareMetal:          isBareMetal,
 		ServerVersion:      serverVersion,
 		GameUDPPort:        37015,
 		AuthTCPPort:        8081,
@@ -438,7 +460,11 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	}
 
 	note.WriteString(fmt.Sprintf("Server version: **%s**", server.ServerVersion))
-	timeToSpinUp := 2
+	timeToSpinUp := 3
+	if server.BareMetal {
+		timeToSpinUp = 10
+		note.WriteString(fmt.Sprintf("This is a bare metal server. It will take longer to spin up, but will be more performant. Ideally, you should only use this if you are hosting a tournament."))
+	}
 	note.WriteString(fmt.Sprintf(". Server will be up in: **%d** minutes", timeToSpinUp))
 	if h.autoDeleteDuration != time.Duration(0) {
 		note.WriteString(fmt.Sprintf(", and autodeleted in in **%s**", h.autoDeleteDuration.String()))
