@@ -460,7 +460,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	}
 	timeToSpinUp := 2
 	if server.BareMetal {
-		timeToSpinUp = 10
+		timeToSpinUp = 20
 		note.WriteString(fmt.Sprintf("**This is a bare metal server. It will take longer to spin up, but will be more performant. Ideally, you should only use this if you are hosting a tournament.**"))
 		note.WriteString("\n")
 	}
