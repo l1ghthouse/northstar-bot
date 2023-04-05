@@ -45,7 +45,7 @@ var thunderStoreLink = "https://northstar.thunderstore.io/api/v1/package/"
 
 func GetPackages(ctx context.Context) ([]Package, error) {
 	client := http.Client{
-		Timeout: time.Second * 2,
+		Timeout: time.Second * 10,
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, thunderStoreLink, nil)
