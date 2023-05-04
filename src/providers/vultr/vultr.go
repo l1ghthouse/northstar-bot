@@ -19,10 +19,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const (
-	ubuntuDockerImageID = 37
-)
-
 type Config struct {
 	APIKey   string `required:"true"`
 	Tag      string `default:"ephemeral"`
@@ -368,6 +364,11 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 
 	var dateCreated string
 
+	ubuntuDockerImageID, err := v.getVultrAppID(ctx, "Docker")
+	if err != nil {
+		return err
+	}
+
 	if server.BareMetal {
 		var bareMetalInstance *govultr.BareMetalServer
 		for _, plan := range bareMetalPlans {
@@ -468,6 +469,21 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 		}
 	}
 
+}
+
+func (v *vultrClient) getVultrAppID(ctx context.Context, name string) (int, error) {
+	list, _, err := v.client.Application.List(ctx, &govultr.ListOptions{})
+	if err != nil {
+		return 0, fmt.Errorf("unable to list applications: %w", err)
+	}
+
+	for _, app := range list {
+		if app.Name == name {
+			return app.ID, nil
+		}
+	}
+
+	return 0, fmt.Errorf("unable to find application with name %s", name)
 }
 
 func (v *vultrClient) listStartupScripts(ctx context.Context) ([]govultr.StartupScript, error) {
