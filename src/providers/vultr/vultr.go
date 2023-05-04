@@ -376,7 +376,7 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 				Region:          regionID,
 				Plan:            plan, // One of low-end bare metal server plans
 				Label:           server.Name,
-				AppID:           ubuntuDockerImageID,
+				ImageID:         ubuntuDockerImageID,
 				UserData:        cmd,          // Command to pull docker container, and create a server
 				StartupScriptID: resScript.ID, // Startup script
 				Tags:            tags,         // ephemeral is used to autodelete the instance after some time
@@ -402,7 +402,7 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 				Region:   regionID,
 				Plan:     plan, // One of: 4cpu, 8gb plan until single core is supported. More info: https://www.vultr.com/api/#operation/list-os
 				Label:    server.Name,
-				AppID:    ubuntuDockerImageID,
+				ImageID:  ubuntuDockerImageID,
 				UserData: cmd,          // Command to pull docker container, and create a server
 				ScriptID: resScript.ID, // Startup script
 				Tags:     tags,         // ephemeral is used to autodelete the instance after some time
@@ -471,19 +471,19 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 
 }
 
-func (v *vultrClient) getVultrAppID(ctx context.Context, name string) (int, error) {
+func (v *vultrClient) getVultrAppID(ctx context.Context, name string) (string, error) {
 	list, _, err := v.client.Application.List(ctx, &govultr.ListOptions{})
 	if err != nil {
-		return 0, fmt.Errorf("unable to list applications: %w", err)
+		return "0", fmt.Errorf("unable to list applications: %w", err)
 	}
 
 	for _, app := range list {
 		if app.Name == name {
-			return app.ID, nil
+			return app.ImageID, nil
 		}
 	}
 
-	return 0, fmt.Errorf("unable to find application with name %s", name)
+	return "", fmt.Errorf("unable to find application with name %s", name)
 }
 
 func (v *vultrClient) listStartupScripts(ctx context.Context) ([]govultr.StartupScript, error) {
