@@ -45,8 +45,12 @@ const NorthstarDedicatedRepo = "ghcr.io/pg9182/"
 var DockerTagRegexp = regexp.MustCompile("^(northstar-dedicated|northstar-dedicated-ci|northstar-dedicated-dev):([a-zA-Z0-9_.-]{1,128})$")
 
 var NorthstarVersions = map[string]DockerVersion{
-	"1.11.4": {
+	"1.14.0": {
 		IsLatest:    true,
+		DockerImage: NorthstarDedicatedRepo + "northstar-dedicated:1-tf2.0.11.0-ns1.14.0",
+	},
+	"1.11.4": {
+		IsLatest:    false,
 		DockerImage: NorthstarDedicatedRepo + "northstar-dedicated:1-tf2.0.11.0-ns1.11.4",
 	},
 	"1.12.3": {
