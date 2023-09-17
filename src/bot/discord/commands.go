@@ -458,7 +458,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		note.WriteString(fmt.Sprintf("Insecure mode is enabled. If master server is offline, use: `connect %s:%d`", server.MainIP, server.GameUDPPort))
 		note.WriteString("\n")
 	}
-	timeToSpinUp := 2
+	timeToSpinUp := 5 // Now that we have to deal with broken vultr servers
 	if server.BareMetal {
 		timeToSpinUp = 20
 		note.WriteString(fmt.Sprintf("**This is a bare metal server. It will take longer to spin up, but will be more performant. Ideally, you should only use this if you are hosting a tournament.**"))
