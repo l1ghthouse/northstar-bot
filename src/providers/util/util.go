@@ -163,7 +163,7 @@ apt update -y
 apt install parallel jq unzip zip -y
 
 curl -fsSL https://get.docker.com -o get-docker.sh
-sh ./get-docker.sh --dry-run &
+sh ./get-docker.sh &
 
 mkdir /mods
 
