@@ -161,6 +161,10 @@ docker pull $IMAGE
 
 apt update -y
 apt install parallel jq unzip zip -y
+
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh ./get-docker.sh --dry-run &
+
 mkdir /mods
 
 %s
@@ -183,6 +187,9 @@ curl -L "%s" -s -H "Accept: application/vnd.oci.image.manifest.v1+json" -H "Auth
   done
   parallel --link --jobs 8 'wget -O {1} {2} --header="Authorization: Bearer QQ==" -nv' ::: "${paths[@]}" ::: "${uri[@]}"
 }
+
+#Wait for docker to finish downloading
+wait
 
 docker run -d --pull always --log-driver json-file --log-opt max-size=200m --publish $NS_AUTH_PORT:$NS_AUTH_PORT/tcp --publish $NS_PORT:$NS_PORT/udp --mount "type=bind,source=/titanfall2,target=/mnt/titanfall,readonly" --mount "type=bind,source=/mods,target=/mnt/mods,readonly" %s --env NS_SERVER_NAME --env NS_MASTERSERVER_URL --env NS_SERVER_DESC --env NS_EXTRA_ARGUMENTS --env NS_AUTH_PORT --env NS_PORT --env NS_SERVER_PASSWORD --env NS_INSECURE --name "%s" $IMAGE
 `, server.DockerImageVersion, server.AuthTCPPort, server.GameUDPPort, server.MasterServer, server.Pin, Btoi(insecure), server.Region, server.Name, serverDesc, extraArgs, OptionalCmd, serverFiles, DockerArgs, containerName), nil
