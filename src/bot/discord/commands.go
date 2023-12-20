@@ -57,6 +57,7 @@ func serverCreateVersionChoices() (options []*discordgo.ApplicationCommandOption
 const CreateServerOptInsecure = "insecure"
 const CreateServerOptMasterServer = "master_server"
 const CreateServerOptBareMetal = "bare_metal"
+const CreateServerOptCheatsEnabled = "cheats_enabled"
 const CreateServerVersionOpt = "server_version"
 const CreateServerCustomDockerContainerOpt = "custom_container"
 const CreateServerCustomThunderstoreMods = "custom_thunderstore_mods"
@@ -111,6 +112,11 @@ var (
 					Type:        discordgo.ApplicationCommandOptionBoolean,
 					Name:        CreateServerOptBareMetal,
 					Description: "Whether the server should be created on bare metal.",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        CreateServerOptCheatsEnabled,
+					Description: "Whether the server should be created with cheats enabled.",
 				},
 			}, modApplicationCommand()...),
 		},
@@ -369,6 +375,21 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 
 	pin := password.MustGenerate(PinLength, PinLength, 0, false, true)
 
+	var cheatsEnabled bool
+	{
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerOptCheatsEnabled)
+		if ok {
+			cheatsEnabled = val.BoolValue()
+		} else {
+			val, ok := h.getGlobalOverrideBoolValue(interaction.ApplicationCommandData().Name, CreateServerOptCheatsEnabled)
+			if ok {
+				cheatsEnabled = val
+			} else {
+				cheatsEnabled = false
+			}
+		}
+	}
+
 	return &nsserver.NSServer{
 		Region:             interaction.ApplicationCommandData().Options[0].StringValue(),
 		RequestedBy:        interaction.Member.User.ID,
@@ -383,6 +404,7 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 		TickRate:           tickRate,
 		DockerImageVersion: dockerImageVersion,
 		MasterServer:       masterServer,
+		EnableCheats:       cheatsEnabled,
 	}, nil
 }
 
@@ -502,6 +524,12 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 		if modInfoMisc != "" {
 			note.WriteString(modInfoMisc)
 		}
+	}
+
+	if server.EnableCheats {
+		note.WriteString("\n")
+		note.WriteString("**Cheats are enabled.**")
+		note.WriteString("\n")
 	}
 
 	if server.TickRate != 0 {

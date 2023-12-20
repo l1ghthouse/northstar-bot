@@ -138,6 +138,10 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 			server.TickRate, server.TickRate, server.TickRate, server.TickRate, server.TickRate, server.TickRate*15, 1/float64(server.TickRate))
 	}
 
+	if server.EnableCheats {
+		extraArgs += fmt.Sprintf("+sv_cheats 1")
+	}
+
 	for k, v := range mergeOptions {
 		server.ModOptions[k] = v
 	}
