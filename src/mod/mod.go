@@ -21,7 +21,6 @@ var ByName = map[string]func() Mod{
 	RebalancedLtsModTest: func() Mod { return &RebalancedLTS{PreRelease: true} },
 	"titan_debug":        func() Mod { return &TitanDebug{} },
 	"ctf_test_spawns":    func() Mod { return &TestCTFSpawns{} },
-	"test_new_spec":      func() Mod { return &TestNewSpec{} },
 	"remove_navmesh":     func() Mod { return &RemoveNavmesh{} },
 	"holo_shift_mod": func() Mod {
 		return &ThunderstoreMod{
