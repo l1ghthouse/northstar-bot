@@ -509,6 +509,9 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 			if server.BareMetal {
 				bareMetalInstance, err := v.getBareMetalByName(ctx, server.Name, tags)
 				if err != nil {
+					if strings.Contains(err.Error(), "no instance found for") {
+						continue
+					}
 					return err
 				}
 				mainIP = bareMetalInstance.MainIP
@@ -516,6 +519,9 @@ func (v *vultrClient) createNorthstarInstance(ctx context.Context, server *nsser
 			} else {
 				instance, err := v.getVultrInstanceByName(ctx, server.Name, tags)
 				if err != nil {
+					if strings.Contains(err.Error(), "no instance found for") {
+						continue
+					}
 					return err
 				}
 				mainIP = instance.MainIP
