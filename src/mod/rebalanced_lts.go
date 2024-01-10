@@ -19,7 +19,7 @@ func (r RebalancedLTS) ModParams(ctx context.Context) (string, string, string, s
 	if err != nil {
 		return "", "", "", "", false, err
 	}
-	link := fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s_%s_pugs_ver.zip", LTSRebalancedRepoOwner, LTSRebalancedRepoName, latestTag, LTSRebalancedModName, latestTag)
+	link := fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s_v%s_pugs_ver.zip", LTSRebalancedRepoOwner, LTSRebalancedRepoName, latestTag, LTSRebalancedModName, latestTag)
 	builder := strings.Builder{}
 	builder.WriteString(cmdWgetZipBuilder(link, LTSRebalancedModName))
 	builder.WriteString(cmdUnzipBuilderWithDst(LTSRebalancedModName))
