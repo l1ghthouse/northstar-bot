@@ -63,6 +63,7 @@ const CreateServerCustomDockerContainerOpt = "custom_container"
 const CreateServerCustomThunderstoreMods = "custom_thunderstore_mods"
 const CreateServerTickRate = "tick_rate"
 const ListServerVerbosityOpt = "verbosity"
+const AdditionalExtraArgs = "additional_extra_args"
 const ExtendLifetime = "extend_lifetime"
 
 var (
@@ -117,6 +118,11 @@ var (
 					Type:        discordgo.ApplicationCommandOptionBoolean,
 					Name:        CreateServerOptCheatsEnabled,
 					Description: "Whether the server should be created with cheats enabled.",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        AdditionalExtraArgs,
+					Description: "Additional extra args to pass to the server",
 				},
 			}, modApplicationCommand()...),
 		},
@@ -295,6 +301,14 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 		}
 	}
 
+	var extraArgs string
+	{
+		val, ok := optionValue(interaction.ApplicationCommandData().Options, AdditionalExtraArgs)
+		if ok {
+			extraArgs = val.StringValue()
+		}
+	}
+
 	if tickRate != 0 && (tickRate < 20 || tickRate > 120) {
 		return nil, fmt.Errorf("tick_rate must be between 20, and 120. Following value is not supported: %d", tickRate)
 	}
@@ -405,6 +419,7 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 		DockerImageVersion: dockerImageVersion,
 		MasterServer:       masterServer,
 		EnableCheats:       cheatsEnabled,
+		ExtraArgs:          extraArgs,
 	}, nil
 }
 

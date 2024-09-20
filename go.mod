@@ -22,6 +22,7 @@ require (
 )
 
 require (
+	al.essio.dev/pkg/shellescape v1.5.0 // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect

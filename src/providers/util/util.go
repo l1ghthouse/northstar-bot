@@ -1,6 +1,7 @@
 package util
 
 import (
+	"al.essio.dev/pkg/shellescape"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -142,6 +143,12 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 		extraArgs += fmt.Sprintf("+sv_cheats 1")
 	}
 
+	if server.ExtraArgs != "" {
+		extraArgs += " " + server.ExtraArgs
+	}
+
+	extraArgs = shellescape.Quote(extraArgs)
+
 	for k, v := range mergeOptions {
 		server.ModOptions[k] = v
 	}
@@ -159,6 +166,7 @@ export NS_SERVER_REGION="%s"
 export NS_NAME="%s"
 export NS_SERVER_NAME="[$NS_SERVER_REGION]$NS_NAME"
 export NS_SERVER_DESC="%s"
+
 export NS_EXTRA_ARGUMENTS="%s +ns_allow_spectators 1"
 
 docker pull $IMAGE
