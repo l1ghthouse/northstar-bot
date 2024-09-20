@@ -135,17 +135,19 @@ func FormatStartupScript(ctx context.Context, server *nsserver.NSServer, serverD
 	var extraArgs string
 
 	if server.TickRate != 0 {
-		extraArgs += fmt.Sprintf("+cl_updaterate_mp %d +sv_updaterate_mp %d +cl_cmdrate %d +sv_minupdaterate %d +sv_maxupdaterate %d +sv_max_snapshots_multiplayer %d +base_tickinterval_mp %.5f",
+		extraArgs += fmt.Sprintf(" +cl_updaterate_mp %d +sv_updaterate_mp %d +cl_cmdrate %d +sv_minupdaterate %d +sv_maxupdaterate %d +sv_max_snapshots_multiplayer %d +base_tickinterval_mp %.5f",
 			server.TickRate, server.TickRate, server.TickRate, server.TickRate, server.TickRate, server.TickRate*15, 1/float64(server.TickRate))
 	}
 
 	if server.EnableCheats {
-		extraArgs += fmt.Sprintf("+sv_cheats 1")
+		extraArgs += fmt.Sprintf(" +sv_cheats 1")
 	}
 
 	if server.ExtraArgs != "" {
 		extraArgs += " " + server.ExtraArgs
 	}
+
+	extraArgs += " +ns_allow_spectators 1"
 
 	extraArgs = shellescape.Quote(extraArgs)
 
@@ -166,8 +168,7 @@ export NS_SERVER_REGION="%s"
 export NS_NAME="%s"
 export NS_SERVER_NAME="[$NS_SERVER_REGION]$NS_NAME"
 export NS_SERVER_DESC="%s"
-
-export NS_EXTRA_ARGUMENTS="%s +ns_allow_spectators 1"
+export NS_EXTRA_ARGUMENTS=%s
 
 docker pull $IMAGE
 
