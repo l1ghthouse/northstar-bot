@@ -306,6 +306,11 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 		val, ok := optionValue(interaction.ApplicationCommandData().Options, AdditionalExtraArgs)
 		if ok {
 			extraArgs = val.StringValue()
+		} else {
+			val, ok := h.getGlobalOverrideStringValue(interaction.ApplicationCommandData().Name, AdditionalExtraArgs)
+			if ok {
+				extraArgs = val
+			}
 		}
 	}
 
