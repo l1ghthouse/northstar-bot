@@ -510,7 +510,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 	note.WriteString(fmt.Sprintf("Server version: **%s**", server.ServerVersion))
 	note.WriteString(fmt.Sprintf(". Server will be up in: **%d** minutes(This could be affected by slowness in vultr regions, or github API)", timeToSpinUp))
 	if h.autoDeleteDuration != time.Duration(0) {
-		note.WriteString(fmt.Sprintf(", and autodeleted at <t:%d>", time.Now().Add(h.autoDeleteDuration).UnixNano()/1e10))
+		note.WriteString(fmt.Sprintf(", and autodeleted at <t:%d:R>", time.Now().Add(h.autoDeleteDuration).UnixNano()/1e10))
 	}
 	note.WriteString("\n")
 
