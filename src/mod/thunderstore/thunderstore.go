@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -75,18 +76,50 @@ func GetPackages(ctx context.Context) ([]Package, error) {
 }
 
 var ErrNoSuchPackage = fmt.Errorf("no such thunderstore package")
+var ErrPackageNameCollision = fmt.Errorf("multiple packages found with the same name")
 
 func GetPackageByName(ctx context.Context, name string) (Package, error) {
 	packages, err := GetPackages(ctx)
 	if err != nil {
 		return Package{}, err
 	}
+
+	// if name contains /, then split into name and owner
+	// then check if owner matches and name matches
+	var owner string
+	if strings.Contains(name, "/") {
+		parts := strings.SplitN(name, "/", 2)
+		owner = parts[0]
+		name = parts[1]
+	}
+	// array of string of different owners
+	owners := []string{}
+
 	for _, pkg := range packages {
-		if pkg.Name == name {
-			return pkg, nil
+		if owner != "" {
+			// If owner is specified, check both owner and name
+			if pkg.Owner == owner && pkg.Name == name {
+				return pkg, nil
+			}
+		} else {
+			// If no owner specified, just check the name
+			if pkg.Name == name {
+				owners = append(owners, pkg.Owner)
+			}
 		}
 	}
-	return Package{}, fmt.Errorf("%w: %s", ErrNoSuchPackage, name)
+
+	if len(owners) == 0 {
+		return Package{}, fmt.Errorf("%w: %s", ErrNoSuchPackage, name)
+	} else if len(owners) > 1 {
+		errString := fmt.Sprintf("multiple packages found with name %s. Please prepend the owner name, like this: Owner/PackageName. Avaliable options are:", name)
+		for _, owner := range owners {
+			errString += "\n" + owner + "/" + name
+		}
+		return Package{}, fmt.Errorf("%w: %s", ErrPackageNameCollision, errString)
+	} else {
+		return Package{}, fmt.Errorf("%w: %s", ErrNoSuchPackage, name)
+	}
 }
 
 var ErrNoVersionsDetected = fmt.Errorf("no versions detected")
