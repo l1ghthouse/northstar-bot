@@ -59,9 +59,9 @@ func latestThunderstoreMod(ctx context.Context, packageName string) (string, str
 	}
 
 	builder := strings.Builder{}
-	builder.WriteString(cmdWgetZipBuilder(latestVersion.DownloadURL, packageName))
-	builder.WriteString(cmdUnzipBuilderWithDst(packageName))
-	builder.WriteString(fmt.Sprintf("cp -r /%s/mods/* /mods/", packageName))
+	builder.WriteString(cmdWgetZipBuilder(latestVersion.DownloadURL, pkg.Name))
+	builder.WriteString(cmdUnzipBuilderWithDst(pkg.Name))
+	builder.WriteString(fmt.Sprintf("cp -r /%s/mods/* /mods/", pkg.Name))
 	builder.WriteString("\n")
 
 	requiredByClient := false
