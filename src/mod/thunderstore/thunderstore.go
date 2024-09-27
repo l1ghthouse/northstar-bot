@@ -94,6 +94,8 @@ func GetPackageByName(ctx context.Context, name string) (Package, error) {
 	}
 	// array of string of different owners
 	owners := []string{}
+	//pointer to a package
+	pkgG := &Package{}
 
 	for _, pkg := range packages {
 		if owner != "" {
@@ -105,6 +107,7 @@ func GetPackageByName(ctx context.Context, name string) (Package, error) {
 			// If no owner specified, just check the name
 			if pkg.Name == name {
 				owners = append(owners, pkg.Owner)
+				pkgG = &pkg
 			}
 		}
 	}
@@ -118,7 +121,7 @@ func GetPackageByName(ctx context.Context, name string) (Package, error) {
 		}
 		return Package{}, fmt.Errorf("%w: %s", ErrPackageNameCollision, errString)
 	} else {
-		return Package{}, fmt.Errorf("%w: %s", ErrNoSuchPackage, name)
+		return *pkgG, nil
 	}
 }
 
