@@ -236,11 +236,16 @@ func optionValue(options []*discordgo.ApplicationCommandInteractionDataOption, n
 	return nil, false
 }
 
-func extractCustomMods(interaction *discordgo.InteractionCreate) string {
+func (h *handler) extractCustomMods(interaction *discordgo.InteractionCreate) string {
 	thunderstoreMods := ""
 	val, ok := optionValue(interaction.ApplicationCommandData().Options, CreateServerCustomThunderstoreMods)
 	if ok {
 		thunderstoreMods = val.StringValue()
+	} else {
+		val, ok := h.getGlobalOverrideStringValue(interaction.ApplicationCommandData().Name, CreateServerCustomThunderstoreMods)
+		if ok {
+			thunderstoreMods = val
+		}
 	}
 
 	return thunderstoreMods
@@ -283,7 +288,7 @@ func (h *handler) defaultServer(name string, interaction *discordgo.InteractionC
 				}
 			}
 		}
-		thunderstoreMods := extractCustomMods(interaction)
+		thunderstoreMods := h.extractCustomMods(interaction)
 
 		for _, m := range strings.Split(thunderstoreMods, ",") {
 			modName := strings.TrimSpace(m)
@@ -519,7 +524,7 @@ func (h *handler) handleCreateServer(session *discordgo.Session, interaction *di
 
 	for modName := range server.ModOptions {
 		_, knownMod := mod.ByName[modName]
-		thunderstoreMods := extractCustomMods(interaction)
+		thunderstoreMods := h.extractCustomMods(interaction)
 		if knownMod || strings.Contains(thunderstoreMods, modName) {
 			enabled, ok := server.ModOptions[modName].(bool)
 			if ok && enabled {
