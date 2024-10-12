@@ -29,7 +29,7 @@ type NSServer struct {
 	ModOptions         datatypes.JSONMap `json:"options" gorm:""`
 	TickRate           uint64            `json:"tick_rate" gorm:""`
 	CreatedAt          time.Time
-	ExtraArgs          string `json:"extraArgs" gorm:"not null;default:null"`
+	ExtraArgs          string `json:"extraArgs" gorm:"default:null"`
 }
 
 func (p *NSServer) BeforeCreate(tx *gorm.DB) (err error) {
